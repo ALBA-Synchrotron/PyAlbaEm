@@ -1,0 +1,3 @@
+#!/usr/bin/sh
+
+exec python $SICILIA/ds/python/PyAlbaEm/PyAlbaEm.py $*
