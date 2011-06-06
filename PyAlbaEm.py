@@ -33,7 +33,7 @@
 
 import PyTango
 import sys
-from albaemlib import albaem
+from AlbaEmLib import albaem
 
 #==================================================================
 #   PyAlbaEm Class Description:
