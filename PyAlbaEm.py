@@ -101,59 +101,59 @@ class PyAlbaEm(PyTango.Device_4Impl):
 
 
 #------------------------------------------------------------------
-#    Read VIn1 attribute
+#    Read I1 attribute
 #------------------------------------------------------------------
-    def read_VIn1(self, attr):
-        print "In ", self.get_name(), "::read_VIn1()"
+    def read_I1(self, attr):
+        print "In ", self.get_name(), "::read_I1()"
         
         #    Add your own code here
         try:
-            attr_VIn1_read = float(self.AlbaElectr.getMeasure('1'))
-            attr.set_value(attr_VIn1_read)
+            attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
+            attr.set_value(attr_I1_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
 
 #------------------------------------------------------------------
-#    Read VIn2 attribute
+#    Read I2 attribute
 #------------------------------------------------------------------
-    def read_VIn2(self, attr):
-        print "In ", self.get_name(), "::read_VIn2()"
+    def read_I2(self, attr):
+        print "In ", self.get_name(), "::read_I2()"
         
         #    Add your own code here
         try:
-            attr_VIn2_read = float(self.AlbaElectr.getMeasure('2'))
-            attr.set_value(attr_VIn2_read)
+            attr_I2_read = float(self.AlbaElectr.getMeasure('2'))
+            attr.set_value(attr_I2_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
 
 #------------------------------------------------------------------
-#    Read VIn3 attribute
+#    Read I3 attribute
 #------------------------------------------------------------------
-    def read_VIn3(self, attr):
-        print "In ", self.get_name(), "::read_VIn3()"
+    def read_I3(self, attr):
+        print "In ", self.get_name(), "::read_I3()"
         
         #    Add your own code here
         try:
-            attr_VIn3_read = float(self.AlbaElectr.getMeasure('3'))
-            attr.set_value(attr_VIn3_read)
+            attr_I3_read = float(self.AlbaElectr.getMeasure('3'))
+            attr.set_value(attr_I3_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
 
 #------------------------------------------------------------------
-#    Read VIn4 attribute
+#    Read I4 attribute
 #------------------------------------------------------------------
-    def read_VIn4(self, attr):
-        print "In ", self.get_name(), "::read_VIn4()"
+    def read_I4(self, attr):
+        print "In ", self.get_name(), "::read_I4()"
         
         #    Add your own code here
        
         try:
-            vin4 = float(self.AlbaElectr.getMeasure('4'))
-            attr_VIn4_read = vin4
-            attr.set_value(attr_VIn4_read)
+            I4 = float(self.AlbaElectr.getMeasure('4'))
+            attr_I4_read = I4
+            attr.set_value(attr_I4_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
@@ -175,6 +175,29 @@ class PyAlbaEm(PyTango.Device_4Impl):
             print("Erroooooooor!!!!!: %s" %e)
 
 
+#------------------------------------------------------------------
+#    Write Ranges attribute
+#------------------------------------------------------------------
+    def write_Ranges(self, attr):
+        print "In ", self.get_name(), "::write_Ranges()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        d = data[0].split(',')
+        ranges = []
+        for i,range in enumerate(d):
+            r = [str(i+1),d[i]]
+            ranges.append(r)
+        #iranges = data.split()
+        #ranges = [['1', iranges[0]], ['2', iranges[1]], ['3', iranges[2]], ['4', iranges[3]]]
+        print "Ranges to write: %s" %ranges
+        self.AlbaElectr.Stop()
+        self.AlbaElectr.setRanges(ranges)
+        self.AlbaElectr.Start()
+
+        print str(self.AlbaElectr.getRanges(['1','2','3','4']))
 
 #==================================================================
 #
@@ -210,26 +233,30 @@ class PyAlbaEmClass(PyTango.DeviceClass):
 
     #    Attribute definitions
     attr_list = {
-        'VIn1':
+        'I1':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
-        'VIn2':
+        'I2':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
-        'VIn3':
+        'I3':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
-        'VIn4':
+        'I4':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
         'Ranges':
             [[PyTango.DevString,
             PyTango.SPECTRUM,
-            PyTango.READ, 4]],
+            PyTango.READ_WRITE, 4],
+            {
+                'description':"You must introduce the four ranges to write.\nExample of writing value: 1mA 1mA 1uA 100uA"
+            }
+            ],
         }
 
 
