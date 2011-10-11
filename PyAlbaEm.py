@@ -193,9 +193,9 @@ class PyAlbaEm(PyTango.Device_4Impl):
         #iranges = data.split()
         #ranges = [['1', iranges[0]], ['2', iranges[1]], ['3', iranges[2]], ['4', iranges[3]]]
         print "Ranges to write: %s" %ranges
-        self.AlbaElectr.Stop()
+        self.AlbaElectr.StopAdc()
         self.AlbaElectr.setRanges(ranges)
-        self.AlbaElectr.Start()
+        self.AlbaElectr.StartAdc()
 
         print str(self.AlbaElectr.getRanges(['1','2','3','4']))
 
