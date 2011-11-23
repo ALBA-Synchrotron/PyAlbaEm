@@ -33,6 +33,7 @@
 
 import PyTango
 import sys
+import math
 from AlbaEmLib import albaem
 
 #==================================================================
@@ -73,12 +74,17 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #------------------------------------------------------------------
     def init_device(self):
         print "In ", self.get_name(), "::init_device()"
-        self.set_state(PyTango.DevState.ON)
-        self.get_device_properties(self.get_device_class())
+        self.AllRanges = [0,0,0,0]
+        try:
+            self.set_state(PyTango.DevState.ON)
+            self.get_device_properties(self.get_device_class())
+            
+            self.AlbaElectr = albaem(self.AlbaEmName)
+            if self.AlbaElectr.connected == False:
+                self.set_state(PyTango.DevState.UNKNOWN)
+        except Exception, e:
+            self.set_state(PyTango.DevState.UNKNOWN)
 
-        print('------------>%s' %self.AlbaEmName)
-        type(self.AlbaEmName)
-        self.AlbaElectr = albaem(self.AlbaEmName)
 
 #------------------------------------------------------------------
 #    Always excuted hook method
@@ -108,8 +114,11 @@ class PyAlbaEm(PyTango.Device_4Impl):
         
         #    Add your own code here
         try:
-            attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
-            attr.set_value(attr_I1_read)
+            #attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
+            #trick
+            self.attr_I1_read = 0.00000001
+            attr.set_value(self.attr_I1_read)
+
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
@@ -122,8 +131,9 @@ class PyAlbaEm(PyTango.Device_4Impl):
         
         #    Add your own code here
         try:
-            attr_I2_read = float(self.AlbaElectr.getMeasure('2'))
-            attr.set_value(attr_I2_read)
+            self.attr_I2_read = float(self.AlbaElectr.getMeasure('2'))
+            attr.set_value(self.attr_I2_read)
+
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
@@ -136,8 +146,8 @@ class PyAlbaEm(PyTango.Device_4Impl):
         
         #    Add your own code here
         try:
-            attr_I3_read = float(self.AlbaElectr.getMeasure('3'))
-            attr.set_value(attr_I3_read)
+            self.attr_I3_read = float(self.AlbaElectr.getMeasure('3'))
+            attr.set_value(self.attr_I3_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
@@ -151,12 +161,131 @@ class PyAlbaEm(PyTango.Device_4Impl):
         #    Add your own code here
        
         try:
-            I4 = float(self.AlbaElectr.getMeasure('4'))
-            attr_I4_read = I4
-            attr.set_value(attr_I4_read)
+            self.attr_I4_read = float(self.AlbaElectr.getMeasure('4'))
+            attr.set_value(self.attr_I4_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
 
+#------------------------------------------------------------------
+#    Read range_ch1 attribute
+#------------------------------------------------------------------
+    def read_range_ch1(self, attr):
+        print "In ", self.get_name(), "::read_range_ch1()"
+        
+        #    Add your own code here
+        try:
+            rgs = self.AlbaElectr.getRanges(['1'])
+            attr_range_ch1_read = rgs[0]
+            attr.set_value(attr_range_ch1_read[1])
+            self.checkRanges(attr,self.attr_I1_read,0)
+        except Exception, e:
+            print("Error reading range_ch1!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write range_ch1 attribute
+#------------------------------------------------------------------
+    def write_range_ch1(self, attr):
+        print "In ", self.get_name(), "::write_Ranges()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+        print type(data[0])
+
+        #    Add your own code here
+        self.AlbaElectr.setRanges([['1', data[0]]])
+        print str(self.AlbaElectr.getRanges(['1']))
+
+#------------------------------------------------------------------
+#    Read range_ch2 attribute
+#------------------------------------------------------------------
+    def read_range_ch2(self, attr):
+        print "In ", self.get_name(), "::read_range_ch2()"
+        
+        #    Add your own code here
+        try:
+            rgs = self.AlbaElectr.getRanges(['2'])
+            attr_range_ch2_read = rgs[0]
+            attr.set_value(attr_range_ch2_read[1])
+            self.checkRanges(attr,self.attr_I2_read,1)
+        except Exception, e:
+            print("Error reading range_ch2!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write range_ch2 attribute
+#------------------------------------------------------------------
+    def write_range_ch2(self, attr):
+        print "In ", self.get_name(), "::write_Ranges()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setRanges([['2', data[0]]])
+        print str(self.AlbaElectr.getRanges(['2']))
+
+#------------------------------------------------------------------
+#    Read range_ch3 attribute
+#------------------------------------------------------------------
+    def read_range_ch3(self, attr):
+        print "In ", self.get_name(), "::read_range_ch3()"
+        
+        #    Add your own code here
+        try:
+            rgs = self.AlbaElectr.getRanges(['3'])
+            attr_range_ch3_read = rgs[0]
+            attr.set_value(attr_range_ch3_read[1])
+            self.checkRanges(attr,self.attr_I3_read,2)
+        except Exception, e:
+            print("Error reading range_ch3!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write range_ch3 attribute
+#------------------------------------------------------------------
+    def write_range_ch3(self, attr):
+        print "In ", self.get_name(), "::write_Ranges()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setRanges([['3', data[0]]])
+        print str(self.AlbaElectr.getRanges(['3']))
+
+#------------------------------------------------------------------
+#    Read range_ch4 attribute
+#------------------------------------------------------------------
+    def read_range_ch4(self, attr):
+        print "In ", self.get_name(), "::read_range_ch4()"
+        
+        #    Add your own code here
+        try:
+            rgs = self.AlbaElectr.getRanges(['4'])
+            attr_range_ch4_read = rgs[0]
+            attr.set_value(attr_range_ch4_read[1])
+            self.checkRanges(attr,self.attr_I4_read,3)
+        except Exception, e:
+            print("Error reading range_ch4!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write range_ch4 attribute
+#------------------------------------------------------------------
+    def write_range_ch4(self, attr):
+        print "In ", self.get_name(), "::write_Ranges()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setRanges([['4', data[0]]])
+        print str(self.AlbaElectr.getRanges(['4']))
 
 #------------------------------------------------------------------
 #    Read Ranges attribute
@@ -167,9 +296,9 @@ class PyAlbaEm(PyTango.Device_4Impl):
         #    Add your own code here
         try:
             rgs = self.AlbaElectr.getRanges(['1','2','3','4'])
-            rgsList = []
-            for i in rgs: rgsList.append(i[1])
-            attr_Ranges_read = rgsList
+            for i,r in enumerate(rgs): 
+                self.AllRanges[i] = r[1]
+            attr_Ranges_read = self.AllRanges
             attr.set_value(attr_Ranges_read, 4)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
@@ -190,14 +319,184 @@ class PyAlbaEm(PyTango.Device_4Impl):
         for i,range in enumerate(d):
             r = [str(i+1),d[i]]
             ranges.append(r)
+            self.AllRanges[i] = d[i]
         #iranges = data.split()
         #ranges = [['1', iranges[0]], ['2', iranges[1]], ['3', iranges[2]], ['4', iranges[3]]]
         print "Ranges to write: %s" %ranges
-        self.AlbaElectr.StopAdc()
         self.AlbaElectr.setRanges(ranges)
-        self.AlbaElectr.StartAdc()
 
         print str(self.AlbaElectr.getRanges(['1','2','3','4']))
+
+#------------------------------------------------------------------
+#    Read filter_ch1 attribute
+#------------------------------------------------------------------
+    def read_filter_ch1(self, attr):
+        print "In ", self.get_name(), "::read_filter_ch1()"
+        
+        #    Add your own code here
+        try:
+            fltr = self.AlbaElectr.getFilters(['1'])
+            attr_filter_ch1_read = fltr[0]
+            attr.set_value(attr_filter_ch1_read[1])
+        except Exception, e:
+            print("Error reading filter_ch1!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write filter_ch1 attribute
+#------------------------------------------------------------------
+    def write_filter_ch1(self, attr):
+        print "In ", self.get_name(), "::write_filter_ch1()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setFilters([['1', data[0]]])
+        print str(self.AlbaElectr.getFilters(['1']))
+
+
+#------------------------------------------------------------------
+#    Read filter_ch2 attribute
+#------------------------------------------------------------------
+    def read_filter_ch2(self, attr):
+        print "In ", self.get_name(), "::read_filter_ch2()"
+        
+        #    Add your own code here
+        try:
+            fltr = self.AlbaElectr.getFilters(['2'])
+            attr_filter_ch2_read = fltr[0]
+            attr.set_value(attr_filter_ch2_read[1])
+        except Exception, e:
+            print("Error reading filter_ch2!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write filter_ch2 attribute
+#------------------------------------------------------------------
+    def write_filter_ch2(self, attr):
+        print "In ", self.get_name(), "::write_filter_ch2()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setFilters([['2', data[0]]])
+        print str(self.AlbaElectr.getFilters(['2']))
+
+
+#------------------------------------------------------------------
+#    Read filter_ch3 attribute
+#------------------------------------------------------------------
+    def read_filter_ch3(self, attr):
+        print "In ", self.get_name(), "::read_filter_ch3()"
+        
+        #    Add your own code here
+        try:
+            fltr = self.AlbaElectr.getFilters(['3'])
+            attr_filter_ch3_read = fltr[0]
+            attr.set_value(attr_filter_ch3_read[1])
+        except Exception, e:
+            print("Error reading filter_ch3!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write filter_ch3 attribute
+#------------------------------------------------------------------
+    def write_filter_ch3(self, attr):
+        print "In ", self.get_name(), "::write_filter_ch3()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setFilters([['3', data[0]]])
+        print str(self.AlbaElectr.getFilters(['3']))
+
+#------------------------------------------------------------------
+#    Read filter_ch4 attribute
+#------------------------------------------------------------------
+    def read_filter_ch4(self, attr):
+        print "In ", self.get_name(), "::read_filter_ch4()"
+        
+        #    Add your own code here
+        try:
+            fltr = self.AlbaElectr.getFilters(['4'])
+            attr_filter_ch4_read = fltr[0]
+            attr.set_value(attr_filter_ch4_read[1])
+        except Exception, e:
+            print("Error reading filter_ch4!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write filter_ch4 attribute
+#------------------------------------------------------------------
+    def write_filter_ch4(self, attr):
+        print "In ", self.get_name(), "::write_filter_ch4()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setFilters([['4', data[0]]])
+        print str(self.AlbaElectr.getFilters(['4']))
+
+#------------------------------------------------------------------
+#    Read Filters attribute
+#------------------------------------------------------------------
+    def read_Filters(self, attr):
+        print "In ", self.get_name(), "::read_Filters()"
+        
+        #    Add your own code here
+        try:
+            fltrs = self.AlbaElectr.getFiltersAll()
+            fltrsList = []
+            for i in fltrs: fltrsList.append(i[1])
+            attr_Filters_read = fltrsList
+            attr.set_value(attr_Filters_read, 4)
+        except Exception, e:
+            print("Error reading Filters!: %s" %e)
+
+
+#------------------------------------------------------------------
+#    Write Filters attribute
+#------------------------------------------------------------------
+    def write_Filters(self, attr):
+        print "In ", self.get_name(), "::write_Filters()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        d = data[0].split(',')
+        filters = []
+        for i,filter in enumerate(d):
+            f = [str(i+1),d[i]]
+            filters.append(f)
+        print "Filters to write: %s" %filters
+        self.AlbaElectr.setFiltersAll(filters)
+
+        print str(self.AlbaElectr.getFiltersAll())
+
+#------------------------------------------------------------------
+#    My own methods
+#------------------------------------------------------------------
+    def checkRanges(self,attr,current,axis):
+
+        dictMinRanges = {'1mA':1e-6,'100uA':1e-7,'10uA':1e-8,'1uA':1e-9,'100nA':1e-10,'10nA':1e-11,'1nA':1e-12,'100pA':1e-13}
+        dictMaxRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,'100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
+        
+        if math.fabs(current) >= dictMaxRanges[self.AllRanges[axis]]:
+            attr.set_quality(PyTango.AttrQuality.ATTR_ALARM)
+        elif math.fabs(current) <= dictMinRanges[self.AllRanges[axis]]:
+            attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
+        else:
+            self.set_state(PyTango.DevState.ON)
+
 
 #==================================================================
 #
@@ -249,12 +548,52 @@ class PyAlbaEmClass(PyTango.DeviceClass):
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
+        'range_ch1':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'range_ch2':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'range_ch3':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'range_ch4':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
         'Ranges':
             [[PyTango.DevString,
             PyTango.SPECTRUM,
             PyTango.READ_WRITE, 4],
             {
                 'description':"You must introduce the four ranges to write.\nExample of writing value: 1mA 1mA 1uA 100uA"
+            }
+            ],
+        'filter_ch1':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'filter_ch2':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'filter_ch3':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'filter_ch4':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'Filters':
+            [[PyTango.DevString,
+            PyTango.SPECTRUM,
+            PyTango.READ_WRITE, 4],
+            {
+                'description':"You must introduce the four filters to write.\nExample of writing value: 1 10 100 NO "
             }
             ],
         }
