@@ -74,7 +74,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #------------------------------------------------------------------
     def init_device(self):
         print "In ", self.get_name(), "::init_device()"
-        self.AllRanges = [0,0,0,0]
+        self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
         try:
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
@@ -114,9 +114,9 @@ class PyAlbaEm(PyTango.Device_4Impl):
         
         #    Add your own code here
         try:
-            #attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
-            #trick
-            self.attr_I1_read = 0.00000001
+            attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
+            #trick for tests checkRanges
+            #self.attr_I1_read = 0.00000001
             attr.set_value(self.attr_I1_read)
 
         except Exception, e:
@@ -177,6 +177,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             rgs = self.AlbaElectr.getRanges(['1'])
             attr_range_ch1_read = rgs[0]
             attr.set_value(attr_range_ch1_read[1])
+            self.AllRanges[0] = attr_range_ch1_read[1]
             self.checkRanges(attr,self.attr_I1_read,0)
         except Exception, e:
             print("Error reading range_ch1!: %s" %e)
@@ -195,6 +196,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 
         #    Add your own code here
         self.AlbaElectr.setRanges([['1', data[0]]])
+        self.AllRanges[0] = data[0]
         print str(self.AlbaElectr.getRanges(['1']))
 
 #------------------------------------------------------------------
@@ -208,6 +210,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             rgs = self.AlbaElectr.getRanges(['2'])
             attr_range_ch2_read = rgs[0]
             attr.set_value(attr_range_ch2_read[1])
+            self.AllRanges[1] = attr_range_ch2_read[1]
             self.checkRanges(attr,self.attr_I2_read,1)
         except Exception, e:
             print("Error reading range_ch2!: %s" %e)
@@ -225,6 +228,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 
         #    Add your own code here
         self.AlbaElectr.setRanges([['2', data[0]]])
+        self.AllRanges[1] = data[0]
         print str(self.AlbaElectr.getRanges(['2']))
 
 #------------------------------------------------------------------
@@ -238,6 +242,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             rgs = self.AlbaElectr.getRanges(['3'])
             attr_range_ch3_read = rgs[0]
             attr.set_value(attr_range_ch3_read[1])
+            self.AllRanges[2] = attr_range_ch3_read[1]
             self.checkRanges(attr,self.attr_I3_read,2)
         except Exception, e:
             print("Error reading range_ch3!: %s" %e)
@@ -253,8 +258,9 @@ class PyAlbaEm(PyTango.Device_4Impl):
         attr.get_write_value(data)
         print "Attribute value = ", data
 
-        #    Add your own code here
+        #    Add your own code here        
         self.AlbaElectr.setRanges([['3', data[0]]])
+        self.AllRanges[2] = data[0]
         print str(self.AlbaElectr.getRanges(['3']))
 
 #------------------------------------------------------------------
@@ -268,6 +274,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             rgs = self.AlbaElectr.getRanges(['4'])
             attr_range_ch4_read = rgs[0]
             attr.set_value(attr_range_ch4_read[1])
+            self.AllRanges[3] = attr_range_ch4_read[1]
             self.checkRanges(attr,self.attr_I4_read,3)
         except Exception, e:
             print("Error reading range_ch4!: %s" %e)
@@ -285,6 +292,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 
         #    Add your own code here
         self.AlbaElectr.setRanges([['4', data[0]]])
+        self.AllRanges[3] = data[0]
         print str(self.AlbaElectr.getRanges(['4']))
 
 #------------------------------------------------------------------
@@ -496,6 +504,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         else:
             self.set_state(PyTango.DevState.ON)
+            #pass
 
 
 #==================================================================
