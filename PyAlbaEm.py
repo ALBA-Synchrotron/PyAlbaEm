@@ -35,6 +35,8 @@ import PyTango
 import sys
 import math
 from AlbaEmLib import albaem
+#from fandango.dynamic import *
+import fandango
 
 #==================================================================
 #   PyAlbaEm Class Description:
@@ -51,7 +53,7 @@ from AlbaEmLib import albaem
 #==================================================================
 
 
-class PyAlbaEm(PyTango.Device_4Impl):
+class PyAlbaEm(fandango.DynamicDS):
 
 #--------- Add you global variables here --------------------------
 
@@ -59,7 +61,11 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #    Device constructor
 #------------------------------------------------------------------
     def __init__(self,cl, name):
-        PyTango.Device_4Impl.__init__(self,cl,name)
+        #PyTango.Device_4Impl.__init__(self,cl,name)
+        fandango.DynamicDS.__init__(self,cl,name,_locals={
+                                                          #'I2': lambda: (lambda attr: [self.read_I2(attr),attr][1].value)(fandango.tango.fakeAttributeValue()),
+                                                          'READMEASURE': lambda axis: self.readMeasure(axis)
+                                                          },useDynStates=True)
         PyAlbaEm.init_device(self)
 
 #------------------------------------------------------------------
@@ -74,16 +80,19 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #------------------------------------------------------------------
     def init_device(self):
         print "In ", self.get_name(), "::init_device()"
+        self.get_DynDS_properties()
         self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
+        self._allMeasures =[0,0,0,0]
+        self._channelsNames = []
         try:
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
             
             self.AlbaElectr = albaem(self.AlbaEmName)
-            if self.AlbaElectr.connected == False:
-                self.set_state(PyTango.DevState.UNKNOWN)
+            #if self.AlbaElectr.connected == False:
+            #    self.set_state(PyTango.DevState.UNKNOWN)
         except Exception, e:
-            self.set_state(PyTango.DevState.UNKNOWN)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -91,6 +100,8 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #------------------------------------------------------------------
     def always_executed_hook(self):
         print "In ", self.get_name(), "::always_excuted_hook()"
+        fandango.DynamicDS.always_executed_hook(self)
+        #self.set_state(PyTango.DevState.ON) 
 
 
 #==================================================================
@@ -114,13 +125,15 @@ class PyAlbaEm(PyTango.Device_4Impl):
         
         #    Add your own code here
         try:
-            attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
+            self.attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
             #trick for tests checkRanges
             #self.attr_I1_read = 0.00000001
             attr.set_value(self.attr_I1_read)
 
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
+            #Poner el state a FAULT!!!
 
 
 #------------------------------------------------------------------
@@ -136,6 +149,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -150,6 +164,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(self.attr_I3_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -165,6 +180,24 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(self.attr_I4_read)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Read AllChannels attribute
+#------------------------------------------------------------------
+    def read_AllChannels(self, attr):
+        print "In ", self.get_name(), "::read_AllChannels()"
+        
+        #    Add your own code here
+        try:
+            measures, self.status = self.AlbaElectr.getMeasuresAll()
+            for i,value in enumerate(measures): 
+                self._allMeasures[i] = float(value[1])
+            attr.set_value(self._allMeasures, 4)
+        except Exception, e:
+            print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
+
 
 #------------------------------------------------------------------
 #    Read range_ch1 attribute
@@ -181,6 +214,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             self.checkRanges(attr,self.attr_I1_read,0)
         except Exception, e:
             print("Error reading range_ch1!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -214,6 +248,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             self.checkRanges(attr,self.attr_I2_read,1)
         except Exception, e:
             print("Error reading range_ch2!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -246,6 +281,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             self.checkRanges(attr,self.attr_I3_read,2)
         except Exception, e:
             print("Error reading range_ch3!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -278,6 +314,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             self.checkRanges(attr,self.attr_I4_read,3)
         except Exception, e:
             print("Error reading range_ch4!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -310,6 +347,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_Ranges_read, 4)
         except Exception, e:
             print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -348,6 +386,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_filter_ch1_read[1])
         except Exception, e:
             print("Error reading filter_ch1!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -378,6 +417,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_filter_ch2_read[1])
         except Exception, e:
             print("Error reading filter_ch2!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -408,6 +448,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_filter_ch3_read[1])
         except Exception, e:
             print("Error reading filter_ch3!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -437,6 +478,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_filter_ch4_read[1])
         except Exception, e:
             print("Error reading filter_ch4!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -468,6 +510,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_value(attr_Filters_read, 4)
         except Exception, e:
             print("Error reading Filters!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 
 
 #------------------------------------------------------------------
@@ -489,6 +532,29 @@ class PyAlbaEm(PyTango.Device_4Impl):
         self.AlbaElectr.setFiltersAll(filters)
 
         print str(self.AlbaElectr.getFiltersAll())
+        
+#------------------------------------------------------------------
+#    Read ChannelsNames attribute
+#------------------------------------------------------------------
+    def read_ChannelsNames(self, attr):
+        print "In ", self.get_name(), "::read_ChannelsNames()"
+        
+        #    Add your own code here
+        attr.set_value(self._channelsNames, 4)
+
+#------------------------------------------------------------------
+#    Write Filters attribute
+#------------------------------------------------------------------
+    def write_ChannelsNames(self, attr):
+        print "In ", self.get_name(), "::write_ChannelsNames()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        #names = data.split(',')
+        self._channelsNames = data
+        print str(self._channelsNames)
 
 #------------------------------------------------------------------
 #    My own methods
@@ -504,8 +570,31 @@ class PyAlbaEm(PyTango.Device_4Impl):
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         else:
             self.set_state(PyTango.DevState.ON)
+            attr.set_quality(PyTango.AttrQuality.ATTR_VALID)
             #pass
-
+            
+    def readMeasure(self,axis):
+        attr = float(self.AlbaElectr.getMeasure(str(axis)))
+        return attr
+        #attr.set_value(self.attr_I2_read)
+        
+    def StopAdc(self):
+        self.AlbaElectr.StopAdc()
+        
+    def StartAdc(self):
+        self.AlbaElectr.StartAdc()
+        
+    def enableChannel(self,axis):
+        self.AlbaElectr.enableChannel(axis)
+    
+    def setAvsamples(self,value):
+        self.AlbaElectr.setAvsamples(value)
+        
+    def setTrigperiode(self,value):
+        self.AlbaElectr.setTrigperiod(value)
+        
+    def setPoints(self,value):
+        self.AlbaElectr.setPoints(value)
 
 #==================================================================
 #
@@ -518,7 +607,7 @@ class PyAlbaEm(PyTango.Device_4Impl):
 #    PyAlbaEmClass class definition
 #
 #==================================================================
-class PyAlbaEmClass(PyTango.DeviceClass):
+class PyAlbaEmClass(fandango.DynamicDSClass):
 
     #    Class Properties
     class_property_list = {
@@ -531,11 +620,51 @@ class PyAlbaEmClass(PyTango.DeviceClass):
             [PyTango.DevString,
             "name or ip of the Alba Electrometer",
             [] ],
+        'DynamicAttributes':
+            [PyTango.DevVarStringArray,
+            "",
+            [] 
+            ],
         }
-
 
     #    Command definitions
     cmd_list = {
+        'updateDynamicAttributes':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""],
+            {
+                'Display level':PyTango.DispLevel.EXPERT,
+             } ],
+        'StopAdc':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'StartAdc':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'enableChannel':
+            [[PyTango.DevShort, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'setAvsamples':
+            [[PyTango.DevDouble, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'setTrigperiode':
+            [[PyTango.DevDouble, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'setPoints':
+            [[PyTango.DevDouble, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
         }
 
 
@@ -557,6 +686,10 @@ class PyAlbaEmClass(PyTango.DeviceClass):
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
+        'AllChannels':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4]],
         'range_ch1':
             [[PyTango.DevString,
             PyTango.SCALAR,
@@ -603,6 +736,15 @@ class PyAlbaEmClass(PyTango.DeviceClass):
             PyTango.READ_WRITE, 4],
             {
                 'description':"You must introduce the four filters to write.\nExample of writing value: 1 10 100 NO "
+            }
+            ],
+        'ChannelsNames':
+            [[PyTango.DevString,
+            PyTango.SPECTRUM,
+            PyTango.READ_WRITE, 4],
+            {
+                'description':"Channels names. Must be the same names that already exists for pool channels.",
+                'memorized': True
             }
             ],
         }
