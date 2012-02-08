@@ -88,7 +88,11 @@ class PyAlbaEm(fandango.DynamicDS):
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
             
-            self.AlbaElectr = albaem(self.AlbaEmName)
+            if self.LogFileName != "":
+                print self.LogFileName
+                self.AlbaElectr = albaem(self.AlbaEmName, self.LogFileName)
+            else:
+                self.AlbaElectr = albaem(self.AlbaEmName)
             #if self.AlbaElectr.connected == False:
             #    self.set_state(PyTango.DevState.UNKNOWN)
         except Exception, e:
@@ -622,6 +626,11 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [] ],
         'DynamicAttributes':
             [PyTango.DevVarStringArray,
+            "",
+            [] 
+            ],
+        'LogFileName':
+            [PyTango.DevString,
             "",
             [] 
             ],
