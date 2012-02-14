@@ -37,6 +37,8 @@ import math
 from AlbaEmLib import albaem
 #from fandango.dynamic import *
 import fandango
+import logging
+import logging.handlers
 
 #==================================================================
 #   PyAlbaEm Class Description:
@@ -88,11 +90,33 @@ class PyAlbaEm(fandango.DynamicDS):
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
             
-            if self.LogFileName != "":
+            if self.LogFileName != "" or self.LogFileName == None or self.LogFileName == []:
                 print self.LogFileName
-                self.AlbaElectr = albaem(self.AlbaEmName, self.LogFileName)
-            else:
+                #self.AlbaElectr = albaem(self.AlbaEmName, self.LogFileName)
+                #self.AlbaElectr.logger.add_handler
+            #else:
                 self.AlbaElectr = albaem(self.AlbaEmName)
+                DftLogFormat = '%(threadName)-14s %(levelname)-8s %(asctime)s %(name)s: %(message)s'
+                format = logging.Formatter(DftLogFormat)
+                #self.logger = logging.Logger("albaEM")
+                #logging.basicConfig(filename=self.LogFileName, format=DftLogFormat, level=logging.DEBUG)
+                
+                
+                self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
+                self.my_logger.setLevel(logging.DEBUG)
+                
+                handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240, backupCount=5)
+                handler.setFormatter(format)
+                self.my_logger.addHandler(handler)
+                
+                self.my_logger.debug('MORE testing')
+                #self.logger.addHandler(logging.FileHandler(self.LogFileName))
+                
+                #handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240, backupCount=5)
+                #handler.setFormatter(format)
+                self.AlbaElectr.logger.addHandler(handler)
+                
+                #self.AlbaElectr.logger.addHandler(logging.FileHandler("albaEmLog.txt"))
             #if self.AlbaElectr.connected == False:
             #    self.set_state(PyTango.DevState.UNKNOWN)
         except Exception, e:
@@ -106,6 +130,7 @@ class PyAlbaEm(fandango.DynamicDS):
         print "In ", self.get_name(), "::always_excuted_hook()"
         fandango.DynamicDS.always_executed_hook(self)
         #self.set_state(PyTango.DevState.ON) 
+        #self.checkAlbaEmState()
 
 
 #==================================================================
@@ -202,7 +227,22 @@ class PyAlbaEm(fandango.DynamicDS):
             print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
 
-
+#------------------------------------------------------------------
+#    Read LastValues attribute
+#------------------------------------------------------------------
+    def read_LastValues(self, attr):
+        print "In ", self.get_name(), "::read_LastValues()"
+        
+        #    Add your own code here
+        try:
+            _lastValues = ['0','0','0','0']
+            lastValues = self.AlbaElectr.getLdata()
+            for i,value in enumerate(lastValues[0]): 
+                _lastValues[i] = float(value[1])
+            attr.set_value(_lastValues, 4)
+        except Exception, e:
+            print("Erroooooooor!!!!!: %s" %e)
+            self.set_state(PyTango.DevState.FAULT)
 #------------------------------------------------------------------
 #    Read range_ch1 attribute
 #------------------------------------------------------------------
@@ -547,7 +587,7 @@ class PyAlbaEm(fandango.DynamicDS):
         attr.set_value(self._channelsNames, 4)
 
 #------------------------------------------------------------------
-#    Write Filters attribute
+#    Write ChannelsNames attribute
 #------------------------------------------------------------------
     def write_ChannelsNames(self, attr):
         print "In ", self.get_name(), "::write_ChannelsNames()"
@@ -559,7 +599,30 @@ class PyAlbaEm(fandango.DynamicDS):
         #names = data.split(',')
         self._channelsNames = data
         print str(self._channelsNames)
+        
+#------------------------------------------------------------------
+#    Read LogRecord attribute
+#------------------------------------------------------------------
+    def read_LogRecord(self, attr):
+        print "In ", self.get_name(), "::read_LogRecord()"
+        
+        #    Add your own code here
+        logState = self.AlbaElectr.logger.getRecordState()
+        attr.set_value(logState)
 
+#------------------------------------------------------------------
+#    Write LogRecord attribute
+#------------------------------------------------------------------
+    def write_LogRecord(self, attr):
+        print "In ", self.get_name(), "::write_LogRecord()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.logger.setRecordState(data)
+        print str(self.AlbaElectr.logger.getRecordState())
+        
 #------------------------------------------------------------------
 #    My own methods
 #------------------------------------------------------------------
@@ -573,20 +636,40 @@ class PyAlbaEm(fandango.DynamicDS):
         elif math.fabs(current) <= dictMinRanges[self.AllRanges[axis]]:
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         else:
-            self.set_state(PyTango.DevState.ON)
+            #self.set_state(PyTango.DevState.ON)
             attr.set_quality(PyTango.AttrQuality.ATTR_VALID)
             #pass
+            
+    def checkAlbaEmState(self):
+        state = self.AlbaElectr.getState()
+        
+        if state == 'ON': self.set_state(PyTango.DevState.ON)
+        elif state == 'RUNNING': self.set_state(PyTango.DevState.RUNNING)
+        elif state == 'IDLE': self.set_state(PyTango.DevState.STANDBY)
+        else: self.set_state(PyTango.DevState.UNKNOWN)
             
     def readMeasure(self,axis):
         attr = float(self.AlbaElectr.getMeasure(str(axis)))
         return attr
         #attr.set_value(self.attr_I2_read)
         
+#==================================================================
+#
+#    PyAlbaEm command methods
+#
+#==================================================================
+
     def StopAdc(self):
         self.AlbaElectr.StopAdc()
-        
+     
+    def Stop(self):
+        self.AlbaElectr.Stop()       
+    
     def StartAdc(self):
         self.AlbaElectr.StartAdc()
+    
+    def Start(self):
+        self.AlbaElectr.Start()
         
     def enableChannel(self,axis):
         self.AlbaElectr.enableChannel(axis)
@@ -599,12 +682,6 @@ class PyAlbaEm(fandango.DynamicDS):
         
     def setPoints(self,value):
         self.AlbaElectr.setPoints(value)
-
-#==================================================================
-#
-#    PyAlbaEm command methods
-#
-#==================================================================
 
 #==================================================================
 #
@@ -643,6 +720,16 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [PyTango.DevVoid, ""],
             {
                 'Display level':PyTango.DispLevel.EXPERT,
+             } ],
+        'Stop':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'Start':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevVoid, ""],
+            {
              } ],
         'StopAdc':
             [[PyTango.DevVoid, ""],
@@ -696,6 +783,10 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.SCALAR,
             PyTango.READ]],
         'AllChannels':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4]],
+        'LastValues':
             [[PyTango.DevDouble,
             PyTango.SPECTRUM,
             PyTango.READ, 4]],
@@ -756,6 +847,10 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
                 'memorized': True
             }
             ],
+        'LogRecord':
+            [[PyTango.DevBoolean,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
         }
 
 
@@ -773,6 +868,7 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
 #
 #==================================================================
 if __name__ == '__main__':
+    #logging example taurus/core/util/log.py (format)
     try:
         py = PyTango.Util(sys.argv)
         py.add_TgClass(PyAlbaEmClass,PyAlbaEm,'PyAlbaEm')
