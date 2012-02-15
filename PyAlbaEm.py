@@ -121,6 +121,7 @@ class PyAlbaEm(fandango.DynamicDS):
             #    self.set_state(PyTango.DevState.UNKNOWN)
         except Exception, e:
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in init_device: %s", e)
 
 
 #------------------------------------------------------------------
@@ -130,7 +131,7 @@ class PyAlbaEm(fandango.DynamicDS):
         print "In ", self.get_name(), "::always_excuted_hook()"
         fandango.DynamicDS.always_executed_hook(self)
         #self.set_state(PyTango.DevState.ON) 
-        #self.checkAlbaEmState()
+        self.checkAlbaEmState()
 
 
 #==================================================================
@@ -160,8 +161,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr.set_value(self.attr_I1_read)
 
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_I1: %s", e)
             #Poner el state a FAULT!!!
 
 
@@ -177,8 +179,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr.set_value(self.attr_I2_read)
 
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_I2: %s", e)
 
 
 #------------------------------------------------------------------
@@ -192,8 +195,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.attr_I3_read = float(self.AlbaElectr.getMeasure('3'))
             attr.set_value(self.attr_I3_read)
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_I3: %s", e)
 
 
 #------------------------------------------------------------------
@@ -208,8 +212,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.attr_I4_read = float(self.AlbaElectr.getMeasure('4'))
             attr.set_value(self.attr_I4_read)
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_I4: %s", e)
 
 #------------------------------------------------------------------
 #    Read AllChannels attribute
@@ -224,8 +229,9 @@ class PyAlbaEm(fandango.DynamicDS):
                 self._allMeasures[i] = float(value[1])
             attr.set_value(self._allMeasures, 4)
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AllChannels: %s", e)
 
 #------------------------------------------------------------------
 #    Read LastValues attribute
@@ -241,8 +247,9 @@ class PyAlbaEm(fandango.DynamicDS):
                 _lastValues[i] = float(value[1])
             attr.set_value(_lastValues, 4)
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_LastValues: %s", e)
 #------------------------------------------------------------------
 #    Read range_ch1 attribute
 #------------------------------------------------------------------
@@ -257,8 +264,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.AllRanges[0] = attr_range_ch1_read[1]
             self.checkRanges(attr,self.attr_I1_read,0)
         except Exception, e:
-            print("Error reading range_ch1!: %s" %e)
+            #print("Error reading range_ch1!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_range_ch1: %s", e)
 
 
 #------------------------------------------------------------------
@@ -291,8 +299,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.AllRanges[1] = attr_range_ch2_read[1]
             self.checkRanges(attr,self.attr_I2_read,1)
         except Exception, e:
-            print("Error reading range_ch2!: %s" %e)
+            #print("Error reading range_ch2!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_range_ch2: %s", e)
 
 
 #------------------------------------------------------------------
@@ -324,8 +333,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.AllRanges[2] = attr_range_ch3_read[1]
             self.checkRanges(attr,self.attr_I3_read,2)
         except Exception, e:
-            print("Error reading range_ch3!: %s" %e)
+            #print("Error reading range_ch3!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_range_ch3: %s", e)
 
 
 #------------------------------------------------------------------
@@ -357,8 +367,9 @@ class PyAlbaEm(fandango.DynamicDS):
             self.AllRanges[3] = attr_range_ch4_read[1]
             self.checkRanges(attr,self.attr_I4_read,3)
         except Exception, e:
-            print("Error reading range_ch4!: %s" %e)
+            #print("Error reading range_ch4!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_range_ch4: %s", e)
 
 
 #------------------------------------------------------------------
@@ -390,8 +401,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_Ranges_read = self.AllRanges
             attr.set_value(attr_Ranges_read, 4)
         except Exception, e:
-            print("Erroooooooor!!!!!: %s" %e)
+            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_Ranges: %s", e)
 
 
 #------------------------------------------------------------------
@@ -429,8 +441,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch1_read = fltr[0]
             attr.set_value(attr_filter_ch1_read[1])
         except Exception, e:
-            print("Error reading filter_ch1!: %s" %e)
+            #print("Error reading filter_ch1!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_filter_ch1: %s", e)
 
 
 #------------------------------------------------------------------
@@ -460,8 +473,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch2_read = fltr[0]
             attr.set_value(attr_filter_ch2_read[1])
         except Exception, e:
-            print("Error reading filter_ch2!: %s" %e)
+            #print("Error reading filter_ch2!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_filter_ch2: %s", e)
 
 
 #------------------------------------------------------------------
@@ -491,8 +505,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch3_read = fltr[0]
             attr.set_value(attr_filter_ch3_read[1])
         except Exception, e:
-            print("Error reading filter_ch3!: %s" %e)
+            #print("Error reading filter_ch3!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_filter_ch3: %s", e)
 
 
 #------------------------------------------------------------------
@@ -521,8 +536,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch4_read = fltr[0]
             attr.set_value(attr_filter_ch4_read[1])
         except Exception, e:
-            print("Error reading filter_ch4!: %s" %e)
+            #print("Error reading filter_ch4!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_filter_ch4: %s", e)
 
 
 #------------------------------------------------------------------
@@ -553,8 +569,9 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_Filters_read = fltrsList
             attr.set_value(attr_Filters_read, 4)
         except Exception, e:
-            print("Error reading Filters!: %s" %e)
+            #print("Error reading Filters!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_Filters: %s", e)
 
 
 #------------------------------------------------------------------
@@ -600,29 +617,56 @@ class PyAlbaEm(fandango.DynamicDS):
         self._channelsNames = data
         print str(self._channelsNames)
         
+##------------------------------------------------------------------
+##    Read LogRecord attribute
+##------------------------------------------------------------------
+#    def read_LogRecord(self, attr):
+#        print "In ", self.get_name(), "::read_LogRecord()"
+#        
+#        #    Add your own code here
+#        logState = self.AlbaElectr.logger.getRecordState()
+#        attr.set_value(logState)
+#
+##------------------------------------------------------------------
+##    Write LogRecord attribute
+##------------------------------------------------------------------
+#    def write_LogRecord(self, attr):
+#        print "In ", self.get_name(), "::write_LogRecord()"
+#        data=[]
+#        attr.get_write_value(data)
+#        print "Attribute value = ", data
+#
+#        #    Add your own code here
+#        self.AlbaElectr.logger.setRecordState(data)
+#        print str(self.AlbaElectr.logger.getRecordState())
+#        
+        
 #------------------------------------------------------------------
-#    Read LogRecord attribute
+#    Read TriggerMode attribute
 #------------------------------------------------------------------
-    def read_LogRecord(self, attr):
-        print "In ", self.get_name(), "::read_LogRecord()"
+    def read_TriggerMode(self, attr):
+        print "In ", self.get_name(), "::read_TriggerMode()"
         
         #    Add your own code here
-        logState = self.AlbaElectr.logger.getRecordState()
-        attr.set_value(logState)
+        try:
+            mode = self.AlbaElectr.getTrigmode()
+            attr.set_value(mode)
+        except Exception,e:
+            self.my_logger.error("Exception reading TriggerMode: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
 
 #------------------------------------------------------------------
-#    Write LogRecord attribute
+#    Write TriggerMode attribute
 #------------------------------------------------------------------
-    def write_LogRecord(self, attr):
-        print "In ", self.get_name(), "::write_LogRecord()"
+    def write_TriggerMode(self, attr):
+        print "In ", self.get_name(), "::write_TriggerMode()"
         data=[]
         attr.get_write_value(data)
         print "Attribute value = ", data
 
         #    Add your own code here
-        self.AlbaElectr.logger.setRecordState(data)
-        print str(self.AlbaElectr.logger.getRecordState())
-        
+        self.AlbaElectr.setTrigmode(data[0])
+        print str(data[0])
 #------------------------------------------------------------------
 #    My own methods
 #------------------------------------------------------------------
@@ -847,10 +891,18 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
                 'memorized': True
             }
             ],
-        'LogRecord':
-            [[PyTango.DevBoolean,
+#        'LogRecord':
+#            [[PyTango.DevBoolean,
+#            PyTango.SCALAR,
+#            PyTango.READ_WRITE]],
+        'TriggerMode':
+            [[PyTango.DevString,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'description':"Trigger mode for acquiring. Could be INT or EXT",
+            }
+            ],
         }
 
 
