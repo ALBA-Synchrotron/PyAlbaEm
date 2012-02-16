@@ -66,7 +66,9 @@ class PyAlbaEm(fandango.DynamicDS):
         #PyTango.Device_4Impl.__init__(self,cl,name)
         fandango.DynamicDS.__init__(self,cl,name,_locals={
                                                           #'I2': lambda: (lambda attr: [self.read_I2(attr),attr][1].value)(fandango.tango.fakeAttributeValue()),
-                                                          'READMEASURE': lambda axis: self.readMeasure(axis)
+                                                          'READMEASURE': lambda axis: self.readMeasure(axis),
+                                                          'READBUFFERCHANNEL': lambda axis: self.readBufferChannel(axis),
+                                                          'READBUFFERMEAN' : lambda axis: self.readBufferMean(axis)
                                                           },useDynStates=True)
         PyAlbaEm.init_device(self)
 
@@ -85,40 +87,42 @@ class PyAlbaEm(fandango.DynamicDS):
         self.get_DynDS_properties()
         self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
         self._allMeasures =[0,0,0,0]
-        self._channelsNames = []
+        self._channelsNames = ['I1','I2','I3','I4'] #@todo: check why memorized is not working
+        self.__numOfPoints = 0
+        self.attr_I1_read = None
+        self.attr_I2_read = None
+        self.attr_I3_read = None
+        self.attr_I4_read = None
         try:
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
+            self.AlbaElectr = albaem(self.AlbaEmName)
             
             if self.LogFileName != "" or self.LogFileName == None or self.LogFileName == []:
-                print self.LogFileName
-                #self.AlbaElectr = albaem(self.AlbaEmName, self.LogFileName)
-                #self.AlbaElectr.logger.add_handler
-            #else:
-                self.AlbaElectr = albaem(self.AlbaEmName)
                 DftLogFormat = '%(threadName)-14s %(levelname)-8s %(asctime)s %(name)s: %(message)s'
-                format = logging.Formatter(DftLogFormat)
-                #self.logger = logging.Logger("albaEM")
-                #logging.basicConfig(filename=self.LogFileName, format=DftLogFormat, level=logging.DEBUG)
-                
-                
+                myFormat = logging.Formatter(DftLogFormat)
                 self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
                 self.my_logger.setLevel(logging.DEBUG)
-                
                 handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240, backupCount=5)
-                handler.setFormatter(format)
+                handler.setFormatter(myFormat)
                 self.my_logger.addHandler(handler)
                 
-                self.my_logger.debug('MORE testing')
-                #self.logger.addHandler(logging.FileHandler(self.LogFileName))
-                
-                #handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240, backupCount=5)
-                #handler.setFormatter(format)
                 self.AlbaElectr.logger.addHandler(handler)
+            
+            self.AlbaElectr.setEnablesAll('YES')
+            state = self.AlbaElectr.getState()
+            if state == 'IDLE':
+                self.AlbaElectr.StartAdc()
+            elif state == 'ON':
+                #@warning: super chapuza para evitar errores de lecturas en las medias de los buffer
+                self.AlbaElectr.setPoints(1)
+                self.AlbaElectr.Start()
+            elif state == 'RUNNING':
+                self.AlbaElectr.Stop()
+                self.AlbaElectr.setPoints(1)
+                self.AlbaElectr.Start()
                 
-                #self.AlbaElectr.logger.addHandler(logging.FileHandler("albaEmLog.txt"))
-            #if self.AlbaElectr.connected == False:
-            #    self.set_state(PyTango.DevState.UNKNOWN)
+            
         except Exception, e:
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in init_device: %s", e)
@@ -156,15 +160,11 @@ class PyAlbaEm(fandango.DynamicDS):
         #    Add your own code here
         try:
             self.attr_I1_read = float(self.AlbaElectr.getMeasure('1'))
-            #trick for tests checkRanges
-            #self.attr_I1_read = 0.00000001
             attr.set_value(self.attr_I1_read)
 
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_I1: %s", e)
-            #Poner el state a FAULT!!!
 
 
 #------------------------------------------------------------------
@@ -179,7 +179,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr.set_value(self.attr_I2_read)
 
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_I2: %s", e)
 
@@ -195,7 +194,6 @@ class PyAlbaEm(fandango.DynamicDS):
             self.attr_I3_read = float(self.AlbaElectr.getMeasure('3'))
             attr.set_value(self.attr_I3_read)
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_I3: %s", e)
 
@@ -212,7 +210,6 @@ class PyAlbaEm(fandango.DynamicDS):
             self.attr_I4_read = float(self.AlbaElectr.getMeasure('4'))
             attr.set_value(self.attr_I4_read)
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_I4: %s", e)
 
@@ -229,7 +226,6 @@ class PyAlbaEm(fandango.DynamicDS):
                 self._allMeasures[i] = float(value[1])
             attr.set_value(self._allMeasures, 4)
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_AllChannels: %s", e)
 
@@ -247,7 +243,6 @@ class PyAlbaEm(fandango.DynamicDS):
                 _lastValues[i] = float(value[1])
             attr.set_value(_lastValues, 4)
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_LastValues: %s", e)
 #------------------------------------------------------------------
@@ -262,7 +257,8 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_range_ch1_read = rgs[0]
             attr.set_value(attr_range_ch1_read[1])
             self.AllRanges[0] = attr_range_ch1_read[1]
-            self.checkRanges(attr,self.attr_I1_read,0)
+            if self.attr_I1_read != None:
+                self.checkRanges(attr,self.attr_I1_read,0)
         except Exception, e:
             #print("Error reading range_ch1!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
@@ -297,7 +293,8 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_range_ch2_read = rgs[0]
             attr.set_value(attr_range_ch2_read[1])
             self.AllRanges[1] = attr_range_ch2_read[1]
-            self.checkRanges(attr,self.attr_I2_read,1)
+            if self.attr_I2_read != None:
+                self.checkRanges(attr,self.attr_I2_read,1)
         except Exception, e:
             #print("Error reading range_ch2!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
@@ -331,7 +328,8 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_range_ch3_read = rgs[0]
             attr.set_value(attr_range_ch3_read[1])
             self.AllRanges[2] = attr_range_ch3_read[1]
-            self.checkRanges(attr,self.attr_I3_read,2)
+            if self.attr_I3_read != None:
+                self.checkRanges(attr,self.attr_I3_read,2)
         except Exception, e:
             #print("Error reading range_ch3!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
@@ -365,7 +363,8 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_range_ch4_read = rgs[0]
             attr.set_value(attr_range_ch4_read[1])
             self.AllRanges[3] = attr_range_ch4_read[1]
-            self.checkRanges(attr,self.attr_I4_read,3)
+            if self.attr_I4_read != None:
+                self.checkRanges(attr,self.attr_I4_read,3)
         except Exception, e:
             #print("Error reading range_ch4!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
@@ -665,8 +664,235 @@ class PyAlbaEm(fandango.DynamicDS):
         print "Attribute value = ", data
 
         #    Add your own code here
-        self.AlbaElectr.setTrigmode(data[0])
-        print str(data[0])
+        try:
+            self.AlbaElectr.setTrigmode(data[0])
+            print str(data[0])
+        except Exception, e:
+            self.my_logger.error("Exception setting trigger mode: %s",e)
+            raise
+        
+#------------------------------------------------------------------
+#    Read TriggerPeriod attribute
+#------------------------------------------------------------------
+    def read_TriggerPeriod(self, attr):
+        print "In ", self.get_name(), "::read_TriggerPeriode()"
+        
+        #    Add your own code here
+        try:
+            period = float(self.AlbaElectr.getTrigperiod())
+            period = period/1000.0
+            attr.set_value(period)
+        except Exception,e:
+            self.my_logger.error("Exception reading TriggerPeriod: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Write TriggerPeriod attribute
+#------------------------------------------------------------------
+    def write_TriggerPeriod(self, attr):
+        print "In ", self.get_name(), "::write_TriggerPeriod()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        try:
+            period = data[0]*1000.0
+            self.AlbaElectr.setTrigperiod(period)
+            print str(period)
+        except Exception, e:
+            self.my_logger.error("Exception setting trigger period: %s",e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferSize attribute
+#------------------------------------------------------------------
+    def read_BufferSize(self, attr):
+        print "In ", self.get_name(), "::read_BufferSize()"
+        
+        #    Add your own code here
+        try:
+            self.__numOfPoints = int(self.AlbaElectr.getPoints())
+            attr.set_value(self.__numOfPoints)
+        except Exception,e:
+            self.my_logger.error("Exception reading BufferSize: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Write BufferSize attribute
+#------------------------------------------------------------------
+    def write_BufferSize(self, attr):
+        print "In ", self.get_name(), "::write_BufferSize()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        try:
+            self.__numOfPoints = data[0]
+            self.AlbaElectr.setPoints(self.__numOfPoints)
+            print str(self.__numOfPoints)
+        except Exception, e:
+            self.my_logger.error("Exception setting BufferSize: %s",e)
+            raise 
+  
+#------------------------------------------------------------------
+#    Read AvSamples attribute
+#------------------------------------------------------------------
+    def read_AvSamples(self, attr):
+        print "In ", self.get_name(), "::read_AvSamples()"
+        
+        #    Add your own code here
+        try:
+            avSamples = float(self.AlbaElectr.getAvsamples())
+            avSamples = avSamples/1000
+            attr.set_value(avSamples)
+        except Exception,e:
+            self.my_logger.error("Exception reading AvSamples: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Write AvSamples attribute
+#------------------------------------------------------------------
+    def write_AvSamples(self, attr):
+        print "In ", self.get_name(), "::write_AvSamples()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        try:
+            avSamples = data[0]*1000
+            self.AlbaElectr.setAvsamples(avSamples)
+            print str(avSamples)
+        except Exception, e:
+            self.my_logger.error("Exception setting AvSamples: %s",e)
+            raise  
+
+#------------------------------------------------------------------
+#    Read BufferI1 attribute
+#------------------------------------------------------------------
+    def read_BufferI1(self, attr):
+        print "In ", self.get_name(), "::read_BufferI1()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(1)
+            length = len(data)
+            attr.set_value(data, length)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI1: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI1Mean attribute
+#------------------------------------------------------------------
+    def read_BufferI1Mean(self, attr):
+        print "In ", self.get_name(), "::read_BufferI1Mean()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(1)
+            length = len(data)
+            mean = sum(data) / length
+            attr.set_value(mean)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI1Mean: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI2 attribute
+#------------------------------------------------------------------
+    def read_BufferI2(self, attr):
+        print "In ", self.get_name(), "::read_BufferI2()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(2)
+            length = len(data)
+            attr.set_value(data, length)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI2: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI2Mean attribute
+#------------------------------------------------------------------
+    def read_BufferI2Mean(self, attr):
+        print "In ", self.get_name(), "::read_BufferI2Mean()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(2)
+            length = len(data)
+            mean = sum(data) / length
+            attr.set_value(mean)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI2Mean: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI2 attribute
+#------------------------------------------------------------------
+    def read_BufferI3(self, attr):
+        print "In ", self.get_name(), "::read_BufferI3()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(3)
+            length = len(data)
+            attr.set_value(data, length)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI3: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI3Mean attribute
+#------------------------------------------------------------------
+    def read_BufferI3Mean(self, attr):
+        print "In ", self.get_name(), "::read_BufferI3Mean()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(3)
+            length = len(data)
+            mean = sum(data) / length
+            attr.set_value(mean)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI3Mean: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI4 attribute
+#------------------------------------------------------------------
+    def read_BufferI4(self, attr):
+        print "In ", self.get_name(), "::read_BufferI4()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(4)
+            length = len(data)
+            attr.set_value(data, length)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI4: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read BufferI4Mean attribute
+#------------------------------------------------------------------
+    def read_BufferI4Mean(self, attr):
+        print "In ", self.get_name(), "::read_BufferI4Mean()"
+        
+        #    Add your own code here
+        try:
+            data = self.AlbaElectr.getBufferChannel(4)
+            length = len(data)
+            mean = sum(data) / length
+            attr.set_value(mean)
+        except Exception, e:
+            self.my_logger.error("Exception reading BufferI4Mean: %s", e)
+            raise
+
 #------------------------------------------------------------------
 #    My own methods
 #------------------------------------------------------------------
@@ -696,6 +922,17 @@ class PyAlbaEm(fandango.DynamicDS):
         attr = float(self.AlbaElectr.getMeasure(str(axis)))
         return attr
         #attr.set_value(self.attr_I2_read)
+        
+    def readBufferChannel(self,axis):
+        attr = self.AlbaElectr.getBufferChannel(axis)
+        return attr
+    
+    def readBufferMean(self,axis):
+        attr = self.AlbaElectr.getBufferChannel(axis)
+        length = len(attr)
+        mean = sum(attr) / length
+        return mean
+        
         
 #==================================================================
 #
@@ -902,6 +1139,70 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             {
                 'description':"Trigger mode for acquiring. Could be INT or EXT",
             }
+            ],
+        'TriggerPeriod':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'description':"Trigger period in seconds",
+            }
+            ],
+        'BufferSize':
+            [[PyTango.DevShort,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'description':"Number of points per acquisition",
+            }
+            ],
+        'AvSamples':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'description':"Number of points per acquisition",
+            }
+            ],
+        'BufferI1':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4096],
+            ],
+        'BufferI2':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4096],
+            ],
+        'BufferI3':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4096],
+            ],
+        'BufferI4':
+            [[PyTango.DevDouble,
+            PyTango.SPECTRUM,
+            PyTango.READ, 4096],
+            ],
+        'BufferI1Mean':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ],
+            ],
+        'BufferI2Mean':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ],
+            ],
+        'BufferI3Mean':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ],
+            ],
+        'BufferI4Mean':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ],
             ],
         }
 
