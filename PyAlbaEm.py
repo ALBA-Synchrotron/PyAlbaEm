@@ -111,15 +111,20 @@ class PyAlbaEm(fandango.DynamicDS):
             
             self.AlbaElectr.setEnablesAll('YES')
             state = self.AlbaElectr.getState()
+            self.my_logger.info('State at init_device: %s',state)
             if state == 'IDLE':
                 self.AlbaElectr.StartAdc()
             elif state == 'ON':
                 #@warning: super chapuza para evitar errores de lecturas en las medias de los buffer
+                self.AlbaElectr.StopAdc()
                 self.AlbaElectr.setPoints(1)
+                self.AlbaElectr.StartAdc()
                 self.AlbaElectr.Start()
             elif state == 'RUNNING':
                 self.AlbaElectr.Stop()
+                self.AlbaElectr.StopAdc()
                 self.AlbaElectr.setPoints(1)
+                self.AlbaElectr.StartAdc()
                 self.AlbaElectr.Start()
                 
             
@@ -902,7 +907,7 @@ class PyAlbaEm(fandango.DynamicDS):
         dictMaxRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,'100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
         
         if math.fabs(current) >= dictMaxRanges[self.AllRanges[axis]]:
-            attr.set_quality(PyTango.AttrQuality.ATTR_ALARM)
+            attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         elif math.fabs(current) <= dictMinRanges[self.AllRanges[axis]]:
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         else:
@@ -916,7 +921,9 @@ class PyAlbaEm(fandango.DynamicDS):
         if state == 'ON': self.set_state(PyTango.DevState.ON)
         elif state == 'RUNNING': self.set_state(PyTango.DevState.RUNNING)
         elif state == 'IDLE': self.set_state(PyTango.DevState.STANDBY)
-        else: self.set_state(PyTango.DevState.UNKNOWN)
+        else: 
+            self.my_logger.error('Unknown state %s', state)
+            #self.set_state(PyTango.DevState.UNKNOWN)
             
     def readMeasure(self,axis):
         attr = float(self.AlbaElectr.getMeasure(str(axis)))
