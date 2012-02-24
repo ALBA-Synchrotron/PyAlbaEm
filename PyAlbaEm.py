@@ -103,7 +103,7 @@ class PyAlbaEm(fandango.DynamicDS):
                 myFormat = logging.Formatter(DftLogFormat)
                 self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
                 self.my_logger.setLevel(logging.DEBUG)
-                handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240, backupCount=5)
+                handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240000, backupCount=5)
                 handler.setFormatter(myFormat)
                 self.my_logger.addHandler(handler)
                 
@@ -250,6 +250,7 @@ class PyAlbaEm(fandango.DynamicDS):
         except Exception, e:
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_LastValues: %s", e)
+            self.my_logger.error("_LastValues: %s", str(lastValues))
 #------------------------------------------------------------------
 #    Read range_ch1 attribute
 #------------------------------------------------------------------
@@ -970,6 +971,10 @@ class PyAlbaEm(fandango.DynamicDS):
         
     def setPoints(self,value):
         self.AlbaElectr.setPoints(value)
+        
+    def getEmState(self):
+        state = self.AlbaElectr.getState()
+        return state
 
 #==================================================================
 #
@@ -1049,6 +1054,11 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [PyTango.DevVoid, ""],
             {
              } ],
+        'getEmState':
+            [[PyTango.DevVoid, ""],
+            [PyTango.DevString, ""],
+            {
+             } ]
         }
 
 
