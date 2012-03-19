@@ -30,12 +30,11 @@
 #=============================================================================
 #
 
-
+import thread
 import PyTango
 import sys
 import math
-from AlbaEmLib import albaem
-#from fandango.dynamic import *
+from albaemlib import AlbaEm
 import fandango
 import logging
 import logging.handlers
@@ -63,9 +62,7 @@ class PyAlbaEm(fandango.DynamicDS):
 #    Device constructor
 #------------------------------------------------------------------
     def __init__(self,cl, name):
-        #PyTango.Device_4Impl.__init__(self,cl,name)
         fandango.DynamicDS.__init__(self,cl,name,_locals={
-                                                          #'I2': lambda: (lambda attr: [self.read_I2(attr),attr][1].value)(fandango.tango.fakeAttributeValue()),
                                                           'READMEASURE': lambda axis: self.readMeasure(axis),
                                                           'READBUFFERCHANNEL': lambda axis: self.readBufferChannel(axis),
                                                           'READBUFFERMEAN' : lambda axis: self.readBufferMean(axis)
@@ -87,8 +84,14 @@ class PyAlbaEm(fandango.DynamicDS):
         self.get_DynDS_properties()
         self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
         self._allMeasures =[0,0,0,0]
+        self._offsetPercentages = [0,0,0,0]
+        
+        self.dictRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,
+                         '100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
+        
         self._channelsNames = ['I1','I2','I3','I4'] #@todo: check why memorized is not working
         self.__numOfPoints = 0
+        self.AduToVoltConstant = 1818
         self.attr_I1_read = None
         self.attr_I2_read = None
         self.attr_I3_read = None
@@ -96,7 +99,7 @@ class PyAlbaEm(fandango.DynamicDS):
         try:
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
-            self.AlbaElectr = albaem(self.AlbaEmName)
+            self.AlbaElectr = AlbaEm(self.AlbaEmName)
             
             if self.LogFileName != "" or self.LogFileName == None or self.LogFileName == []:
                 DftLogFormat = '%(threadName)-14s %(levelname)-8s %(asctime)s %(name)s: %(message)s'
@@ -111,21 +114,8 @@ class PyAlbaEm(fandango.DynamicDS):
             
             self.AlbaElectr.setEnablesAll('YES')
             state = self.AlbaElectr.getState()
-            self.my_logger.info('State at init_device: %s',state)
-            if state == 'IDLE':
-                self.AlbaElectr.StartAdc()
-            elif state == 'ON':
-                #@warning: super chapuza para evitar errores de lecturas en las medias de los buffer
-                self.AlbaElectr.StopAdc()
-                self.AlbaElectr.setPoints(1)
-                self.AlbaElectr.StartAdc()
-                self.AlbaElectr.Start()
-            elif state == 'RUNNING':
-                self.AlbaElectr.Stop()
-                self.AlbaElectr.StopAdc()
-                self.AlbaElectr.setPoints(1)
-                self.AlbaElectr.StartAdc()
-                self.AlbaElectr.Start()
+            self.my_logger.info('State at init_device: %s',state)                
+            self.getAllRanges()
                 
             
         except Exception, e:
@@ -139,7 +129,6 @@ class PyAlbaEm(fandango.DynamicDS):
     def always_executed_hook(self):
         print "In ", self.get_name(), "::always_excuted_hook()"
         fandango.DynamicDS.always_executed_hook(self)
-        #self.set_state(PyTango.DevState.ON) 
         self.checkAlbaEmState()
 
 
@@ -226,7 +215,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            measures, self.status = self.AlbaElectr.getMeasuresAll()
+            measures = self.AlbaElectr.getMeasuresAll()[0]
             for i,value in enumerate(measures): 
                 self._allMeasures[i] = float(value[1])
             attr.set_value(self._allMeasures, 4)
@@ -243,14 +232,27 @@ class PyAlbaEm(fandango.DynamicDS):
         #    Add your own code here
         try:
             _lastValues = ['0','0','0','0']
+            lastValues = None
             lastValues = self.AlbaElectr.getLdata()
-            for i,value in enumerate(lastValues[0]): 
-                _lastValues[i] = float(value[1])
-            attr.set_value(_lastValues, 4)
+            #lastValues = self.AlbaElectr.getData(0)
+            if lastValues != None:
+                for i,value in enumerate(lastValues[0]): 
+                    _lastValues[i] = float(value[1])
+                attr.set_value(_lastValues, 4)
+                
+            else:
+                self.my_logger.error('lastValues = None !!')
         except Exception, e:
-            self.set_state(PyTango.DevState.FAULT)
-            self.my_logger.error("Exception in read_LastValues: %s", e)
-            self.my_logger.error("_LastValues: %s", str(lastValues))
+            try:
+                measures = self.AlbaElectr.getMeasuresAll()[0]
+                for i,value in enumerate(measures): 
+                    _lastValues[i] = float(value[1])
+                attr.set_value(_lastValues, 4)
+            except Exception,e:
+                self.set_state(PyTango.DevState.FAULT)
+                self.my_logger.error("Exception in read_LastValues: %s", e)
+                self.my_logger.error("lastValues: %s", str(_lastValues))                
+                
 #------------------------------------------------------------------
 #    Read range_ch1 attribute
 #------------------------------------------------------------------
@@ -302,7 +304,6 @@ class PyAlbaEm(fandango.DynamicDS):
             if self.attr_I2_read != None:
                 self.checkRanges(attr,self.attr_I2_read,1)
         except Exception, e:
-            #print("Error reading range_ch2!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_range_ch2: %s", e)
 
@@ -337,7 +338,6 @@ class PyAlbaEm(fandango.DynamicDS):
             if self.attr_I3_read != None:
                 self.checkRanges(attr,self.attr_I3_read,2)
         except Exception, e:
-            #print("Error reading range_ch3!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_range_ch3: %s", e)
 
@@ -372,7 +372,6 @@ class PyAlbaEm(fandango.DynamicDS):
             if self.attr_I4_read != None:
                 self.checkRanges(attr,self.attr_I4_read,3)
         except Exception, e:
-            #print("Error reading range_ch4!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_range_ch4: %s", e)
 
@@ -400,13 +399,10 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            rgs = self.AlbaElectr.getRanges(['1','2','3','4'])
-            for i,r in enumerate(rgs): 
-                self.AllRanges[i] = r[1]
+            self.getAllRanges()
             attr_Ranges_read = self.AllRanges
             attr.set_value(attr_Ranges_read, 4)
         except Exception, e:
-            #print("Erroooooooor!!!!!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_Ranges: %s", e)
 
@@ -427,9 +423,7 @@ class PyAlbaEm(fandango.DynamicDS):
             r = [str(i+1),d[i]]
             ranges.append(r)
             self.AllRanges[i] = d[i]
-        #iranges = data.split()
-        #ranges = [['1', iranges[0]], ['2', iranges[1]], ['3', iranges[2]], ['4', iranges[3]]]
-        print "Ranges to write: %s" %ranges
+#        print "Ranges to write: %s" %ranges
         self.AlbaElectr.setRanges(ranges)
 
         print str(self.AlbaElectr.getRanges(['1','2','3','4']))
@@ -446,7 +440,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch1_read = fltr[0]
             attr.set_value(attr_filter_ch1_read[1])
         except Exception, e:
-            #print("Error reading filter_ch1!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_filter_ch1: %s", e)
 
@@ -478,7 +471,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch2_read = fltr[0]
             attr.set_value(attr_filter_ch2_read[1])
         except Exception, e:
-            #print("Error reading filter_ch2!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_filter_ch2: %s", e)
 
@@ -510,7 +502,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch3_read = fltr[0]
             attr.set_value(attr_filter_ch3_read[1])
         except Exception, e:
-            #print("Error reading filter_ch3!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_filter_ch3: %s", e)
 
@@ -541,7 +532,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_filter_ch4_read = fltr[0]
             attr.set_value(attr_filter_ch4_read[1])
         except Exception, e:
-            #print("Error reading filter_ch4!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_filter_ch4: %s", e)
 
@@ -574,7 +564,6 @@ class PyAlbaEm(fandango.DynamicDS):
             attr_Filters_read = fltrsList
             attr.set_value(attr_Filters_read, 4)
         except Exception, e:
-            #print("Error reading Filters!: %s" %e)
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_Filters: %s", e)
 
@@ -589,15 +578,351 @@ class PyAlbaEm(fandango.DynamicDS):
         print "Attribute value = ", data
 
         #    Add your own code here
-        d = data[0].split(',')
-        filters = []
-        for i,filter in enumerate(d):
-            f = [str(i+1),d[i]]
-            filters.append(f)
-        print "Filters to write: %s" %filters
-        self.AlbaElectr.setFiltersAll(filters)
+        self.AlbaElectr.setFiltersAll(data[0])
 
         print str(self.AlbaElectr.getFiltersAll())
+        
+        
+
+#------------------------------------------------------------------
+#    Read dInversion_ch1 attribute
+#------------------------------------------------------------------
+    def read_dInversion_ch1(self, attr):
+        print "In ", self.get_name(), "::read_dInversion_ch1()"
+        
+        #    Add your own code here
+        try:
+            dInv = self.AlbaElectr.getDInvs(['1'])
+            attr_dInversion_ch1_read = dInv[0]
+            attr.set_value(attr_dInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_dInversion_ch1: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write dInversion_ch1 attribute
+#------------------------------------------------------------------
+    def write_dInversion_ch1(self, attr):
+        print "In ", self.get_name(), "::write_dInversion_ch1()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setDInvs([['1', data[0]]])
+        print str(self.AlbaElectr.getDInvs(['1']))
+
+
+
+#------------------------------------------------------------------
+#    Read dInversion_ch2 attribute
+#------------------------------------------------------------------
+    def read_dInversion_ch2(self, attr):
+        print "In ", self.get_name(), "::read_dInversion_ch2()"
+        
+        #    Add your own code here
+        try:
+            dInv = self.AlbaElectr.getDInvs(['2'])
+            attr_dInversion_ch1_read = dInv[0]
+            attr.set_value(attr_dInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_dInversion_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write dInversion_ch2 attribute
+#------------------------------------------------------------------
+    def write_dInversion_ch2(self, attr):
+        print "In ", self.get_name(), "::write_dInversion_ch2()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setDInvs([['2', data[0]]])
+        print str(self.AlbaElectr.getDInvs(['2']))
+
+#------------------------------------------------------------------
+#    Read dInversion_ch3 attribute
+#------------------------------------------------------------------
+    def read_dInversion_ch3(self, attr):
+        print "In ", self.get_name(), "::read_dInversion_ch3()"
+        
+        #    Add your own code here
+        try:
+            dInv = self.AlbaElectr.getDInvs(['3'])
+            attr_dInversion_ch1_read = dInv[0]
+            attr.set_value(attr_dInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_dInversion_ch3: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write dInversion_ch3 attribute
+#------------------------------------------------------------------
+    def write_dInversion_ch3(self, attr):
+        print "In ", self.get_name(), "::write_dInversion_ch3()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setDInvs([['3', data[0]]])
+        print str(self.AlbaElectr.getDInvs(['3']))
+
+
+#------------------------------------------------------------------
+#    Read dInversion_ch4 attribute
+#------------------------------------------------------------------
+    def read_dInversion_ch4(self, attr):
+        print "In ", self.get_name(), "::read_dInversion_ch4()"
+        
+        #    Add your own code here
+        try:
+            dInv = self.AlbaElectr.getDInvs(['4'])
+            attr_dInversion_ch1_read = dInv[0]
+            attr.set_value(attr_dInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_dInversion_ch4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write dInversion_ch4 attribute
+#------------------------------------------------------------------
+    def write_dInversion_ch4(self, attr):
+        print "In ", self.get_name(), "::write_dInversion_ch4()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setDInvs([['4', data[0]]])
+        print str(self.AlbaElectr.getDInvs(['4']))
+
+
+#------------------------------------------------------------------
+#    Read dInversions attribute
+#------------------------------------------------------------------
+    def read_dInversions(self, attr):
+        print "In ", self.get_name(), "::read_dInversions()"
+        
+        #    Add your own code here
+        try:
+            dInvs = self.AlbaElectr.getDInvsAll()
+            dInvsList = []
+            for i in dInvs: dInvsList.append(i[1])
+            attr_dInvs_read = dInvsList
+            attr.set_value(attr_dInvs_read, 4)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_dInversions: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write dInversions attribute
+#------------------------------------------------------------------
+    def write_dInversions(self, attr):
+        print "In ", self.get_name(), "::write_dInversions()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setDInvsAll(data[0])
+
+        print str(self.AlbaElectr.getDInvsAll())
+
+
+
+#------------------------------------------------------------------
+#    Read offset_ch1 attribute
+#------------------------------------------------------------------
+    def read_offset_ch1(self, attr):
+        print "In ", self.get_name(), "::read_offset_ch1()"
+        
+        #    Add your own code here
+        try:
+            offset = float(self.AlbaElectr.getOffsetCorr(self.AllRanges[0], 1))
+            offset = (self.dictRanges[self.AllRanges[0]] * self._offsetPercentages[0]) / 100.0
+            attr_offset_ch1_read = offset
+            attr.set_value(attr_offset_ch1_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_ch1: %s", e)
+
+#------------------------------------------------------------------
+#    Read offset_ch2 attribute
+#------------------------------------------------------------------
+    def read_offset_ch2(self, attr):
+        print "In ", self.get_name(), "::read_offset_ch2()"
+        
+        #    Add your own code here
+        try:
+            offset = float(self.AlbaElectr.getOffsetCorr(self.AllRanges[1], 2))
+            offset = (self.dictRanges[self.AllRanges[1]] * self._offsetPercentages[1]) / 100.0
+            attr_offset_ch2_read = offset
+            attr.set_value(attr_offset_ch2_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_ch2: %s", e)
+
+#------------------------------------------------------------------
+#    Read offset_ch3 attribute
+#------------------------------------------------------------------
+    def read_offset_ch3(self, attr):
+        print "In ", self.get_name(), "::read_offset_ch3()"
+        
+        #    Add your own code here
+        try:
+            offset = float(self.AlbaElectr.getOffsetCorr(self.AllRanges[2], 3))
+            offset = (self.dictRanges[self.AllRanges[2]] * self._offsetPercentages[2]) / 100.0
+            attr_offset_ch3_read = offset
+            attr.set_value(attr_offset_ch3_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_ch3: %s", e)
+
+#------------------------------------------------------------------
+#    Read offset_ch4 attribute
+#------------------------------------------------------------------
+    def read_offset_ch4(self, attr):
+        print "In ", self.get_name(), "::read_offset_ch4()"
+        
+        #    Add your own code here
+        try:
+            offset = float(self.AlbaElectr.getOffsetCorr(self.AllRanges[3], 4))
+            offset = (self.dictRanges[self.AllRanges[3]] * self._offsetPercentages[3]) / 100.0
+            attr_offset_ch4_read = offset
+            attr.set_value(attr_offset_ch4_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_ch4: %s", e)
+
+#------------------------------------------------------------------
+#    Read offset_ch1 attribute
+#------------------------------------------------------------------
+    def read_offset_percentage_ch1(self, attr):
+        print "In ", self.get_name(), "::read_offset_percentage_ch1()"
+        
+        #    Add your own code here
+        try:
+            attr.set_value(self._offsetPercentages[0])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_percentage_ch1: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write offset_percentage_ch1 attribute
+#------------------------------------------------------------------
+    def write_offset_percentage_ch1(self, attr):
+        print "In ", self.get_name(), "::write_offset_percentage_ch1()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self._offsetPercentages[0] = data[0]
+        offset = data[0]/100.0
+        thread.start_new_thread(self.changeOffsets,([1],offset))
+        
+#------------------------------------------------------------------
+#    Read offset_ch2 attribute
+#------------------------------------------------------------------
+    def read_offset_percentage_ch2(self, attr):
+        print "In ", self.get_name(), "::read_offset_percentage_ch2()"
+        
+        #    Add your own code here
+        try:
+            attr.set_value(self._offsetPercentages[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_percentage_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write offset_percentage_ch2 attribute
+#------------------------------------------------------------------
+    def write_offset_percentage_ch2(self, attr):
+        print "In ", self.get_name(), "::write_offset_percentage_ch2()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self._offsetPercentages[1] = data[0]
+        offset = data[0]/100.0
+        thread.start_new_thread(self.changeOffsets,([2],offset))
+        
+
+#------------------------------------------------------------------
+#    Read offset_ch3 attribute
+#------------------------------------------------------------------
+    def read_offset_percentage_ch3(self, attr):
+        print "In ", self.get_name(), "::read_offset_percentage_ch3()"
+        
+        #    Add your own code here
+        try:
+            attr.set_value(self._offsetPercentages[2])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_percentage_ch3: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write offset_percentage_ch3 attribute
+#------------------------------------------------------------------
+    def write_offset_percentage_ch3(self, attr):
+        print "In ", self.get_name(), "::write_offset_percentage_ch3()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self._offsetPercentages[2] = data[0]
+        offset = data[0]/100.0
+        thread.start_new_thread(self.changeOffsets,([3],offset))
+        
+        
+#------------------------------------------------------------------
+#    Read offset_ch4 attribute
+#------------------------------------------------------------------
+    def read_offset_percentage_ch4(self, attr):
+        print "In ", self.get_name(), "::read_offset_percentage_ch4()"
+        
+        #    Add your own code here
+        try:
+            attr.set_value(self._offsetPercentages[3])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_offset_percentage_ch4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write offset_percentage_ch4 attribute
+#------------------------------------------------------------------
+    def write_offset_percentage_ch4(self, attr):
+        print "In ", self.get_name(), "::write_offset_percentage_ch4()"
+        
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self._offsetPercentages[3] = data[0]
+        offset = data[0]/100.0
+        thread.start_new_thread(self.changeOffsets,([4],offset))
         
 #------------------------------------------------------------------
 #    Read ChannelsNames attribute
@@ -618,33 +943,9 @@ class PyAlbaEm(fandango.DynamicDS):
         print "Attribute value = ", data
 
         #    Add your own code here
-        #names = data.split(',')
         self._channelsNames = data
         print str(self._channelsNames)
         
-##------------------------------------------------------------------
-##    Read LogRecord attribute
-##------------------------------------------------------------------
-#    def read_LogRecord(self, attr):
-#        print "In ", self.get_name(), "::read_LogRecord()"
-#        
-#        #    Add your own code here
-#        logState = self.AlbaElectr.logger.getRecordState()
-#        attr.set_value(logState)
-#
-##------------------------------------------------------------------
-##    Write LogRecord attribute
-##------------------------------------------------------------------
-#    def write_LogRecord(self, attr):
-#        print "In ", self.get_name(), "::write_LogRecord()"
-#        data=[]
-#        attr.get_write_value(data)
-#        print "Attribute value = ", data
-#
-#        #    Add your own code here
-#        self.AlbaElectr.logger.setRecordState(data)
-#        print str(self.AlbaElectr.logger.getRecordState())
-#        
         
 #------------------------------------------------------------------
 #    Read TriggerMode attribute
@@ -900,21 +1201,75 @@ class PyAlbaEm(fandango.DynamicDS):
             raise
 
 #------------------------------------------------------------------
+#    Read Firmware_version attribute
+#------------------------------------------------------------------
+    def read_Firmware_version(self, attr):
+        print "In ", self.get_name(), "::read_Firmware_version()"
+        
+        #    Add your own code here
+        try:
+            firmware = self.AlbaElectr.extractSimple(self.AlbaElectr.ask('?FIM'))
+            attr.set_value(firmware)
+        except Exception, e:
+            self.my_logger.error("Exception reading Firmware_version: %s", e)
+            raise
+
+#------------------------------------------------------------------
+#    Read AlbaEmIP attribute
+#------------------------------------------------------------------
+    def read_AlbaEmIP(self, attr):
+        print "In ", self.get_name(), "::read_AlbaEmIP()"
+        
+        #    Add your own code here
+        try:
+            ip = self.AlbaElectr.extractSimple(self.AlbaElectr.ask('?DEVIP'))
+            attr.set_value(ip)
+        except Exception, e:
+            self.my_logger.error("Exception reading AlbaEmIP: %s", e)
+            raise
+
+
+#------------------------------------------------------------------
+#    Read AlbaEmMAC attribute
+#------------------------------------------------------------------
+    def read_AlbaEmMAC(self, attr):
+        print "In ", self.get_name(), "::read_AlbaEmMAC()"
+        
+        #    Add your own code here
+        try:
+            mac = self.AlbaElectr.extractSimple(self.AlbaElectr.ask('?DEVMAC'))
+            attr.set_value(mac)
+        except Exception, e:
+            self.my_logger.error("Exception reading AlbaEmMAC: %s", e)
+            raise
+
+
+#------------------------------------------------------------------
 #    My own methods
 #------------------------------------------------------------------
     def checkRanges(self,attr,current,axis):
 
-        dictMinRanges = {'1mA':1e-6,'100uA':1e-7,'10uA':1e-8,'1uA':1e-9,'100nA':1e-10,'10nA':1e-11,'1nA':1e-12,'100pA':1e-13}
-        dictMaxRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,'100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
+        dictMinRanges = {'1mA':1e-6,'100uA':1e-7,'10uA':1e-8,'1uA':1e-9,
+                         '100nA':1e-10,'10nA':1e-11,'1nA':1e-12,'100pA':1e-13}
+        dictMaxRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,
+                         '100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
         
         if math.fabs(current) >= dictMaxRanges[self.AllRanges[axis]]:
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         elif math.fabs(current) <= dictMinRanges[self.AllRanges[axis]]:
             attr.set_quality(PyTango.AttrQuality.ATTR_WARNING)
         else:
-            #self.set_state(PyTango.DevState.ON)
             attr.set_quality(PyTango.AttrQuality.ATTR_VALID)
-            #pass
+            
+    def convertOffsetToAmp(self, offset, channel):
+        """
+            Converts the offset in rawdata to amp.
+            formula: RawData/10(Voltages(10|-10))*range
+            @param offset: offset in rawdata
+            @param channel: channel from 1 - 4
+        """
+        offsetAmp = ((offset/self.AduToVoltConstant)*10/10)*self.dictRanges[self.AllRanges[channel-1]]
+        return offsetAmp
             
     def checkAlbaEmState(self):
         state = self.AlbaElectr.getState()
@@ -924,12 +1279,10 @@ class PyAlbaEm(fandango.DynamicDS):
         elif state == 'IDLE': self.set_state(PyTango.DevState.STANDBY)
         else: 
             self.my_logger.error('Unknown state %s', state)
-            #self.set_state(PyTango.DevState.UNKNOWN)
             
     def readMeasure(self,axis):
         attr = float(self.AlbaElectr.getMeasure(str(axis)))
         return attr
-        #attr.set_value(self.attr_I2_read)
         
     def readBufferChannel(self,axis):
         attr = self.AlbaElectr.getBufferChannel(axis)
@@ -940,7 +1293,17 @@ class PyAlbaEm(fandango.DynamicDS):
         length = len(attr)
         mean = sum(attr) / length
         return mean
-        
+    
+    def getAllRanges(self):
+        rgs = self.AlbaElectr.getRanges(['1','2','3','4'])
+        for i,r in enumerate(rgs): 
+            self.AllRanges[i] = r[1]
+            
+    def recoverRanges(self,ranges):
+        ranges = [['1', ranges[0]], ['2', ranges[1]], ['3', ranges[2]], ['4', ranges[3]]]
+        print "Ranges to write: %s" %ranges
+        self.AlbaElectr.setRanges(ranges)
+
         
 #==================================================================
 #
@@ -975,6 +1338,32 @@ class PyAlbaEm(fandango.DynamicDS):
     def getEmState(self):
         state = self.AlbaElectr.getState()
         return state
+    
+    def offsetCorrection(self,data):
+        percentage = float(data[0])
+        value=percentage/100.0
+        channels = eval(data[1])
+        for i in channels:
+            self._offsetPercentages[i-1]=percentage
+        thread.start_new_thread(self.changeOffsets,(channels,value))
+
+    def changeOffsets(self, channels, value):
+        self.set_state(PyTango.DevState.MOVING)
+        chans = []
+        for ra in channels: chans.append(str(ra))
+        rgs = self.AlbaElectr.getRanges(chans)
+        self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
+        self.AlbaElectr.setRanges(rgs)
+        self.set_state(PyTango.DevState.ON)    
+
+        
+    def digitalInversion(self,option):
+        self.AlbaElectr.setDInvs(option)
+        
+    def sendCommand(self,command):
+        answer = self.AlbaElectr.ask(command)
+        return answer
+    
 
 #==================================================================
 #
@@ -1058,7 +1447,18 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [[PyTango.DevVoid, ""],
             [PyTango.DevString, ""],
             {
-             } ]
+             } ],
+        'offsetCorrection':
+            #[[PyTango.DevDouble, "% to correct"],
+            [[PyTango.DevVarStringArray, "% to correct, channels to correct"],
+            [PyTango.DevVoid, ""],
+            {
+             } ],
+        'sendCommand':
+            [[PyTango.DevString, ""],
+            [PyTango.DevString, ""],
+            {
+             } ],
         }
 
 
@@ -1136,6 +1536,70 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
                 'description':"You must introduce the four filters to write.\nExample of writing value: 1 10 100 NO "
             }
             ],
+        'dInversion_ch1':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'dInversion_ch2':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'dInversion_ch3':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'dInversion_ch4':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'dInversions':
+            [[PyTango.DevString,
+            PyTango.SPECTRUM,
+            PyTango.READ_WRITE, 4],
+            {
+                'description':"You must introduce the four digital inversions \
+                                in order to write. First one corresponds to \
+                                first channel and so on.\n\
+                                Example: NO,NO,YES,YES"
+            }
+            ],
+        'offset_ch1':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'offset_ch2':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'offset_ch3':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'offset_ch4':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'offset_percentage_ch1':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'offset_percentage_ch2':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'offset_percentage_ch3':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'offset_percentage_ch4':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+#        'offsets':
+#            [[PyTango.DevDouble,
+#            PyTango.SPECTRUM,
+#            PyTango.READ_WRITE, 4]
+#            ],
         'ChannelsNames':
             [[PyTango.DevString,
             PyTango.SPECTRUM,
@@ -1221,6 +1685,18 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.SCALAR,
             PyTango.READ],
             ],
+        'Firmware_version':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'AlbaEmIP':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'AlbaEmMAC':
+            [[PyTango.DevString,
+            PyTango.SCALAR,
+            PyTango.READ]],
         }
 
 
