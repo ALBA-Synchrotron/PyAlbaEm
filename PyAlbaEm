@@ -1,3 +1,7 @@
 #!/usr/bin/sh
 
-exec python $SICILIA/ds/python/PyAlbaEm/PyAlbaEm.py $*
+#exec python $SICILIA/ds/python/PyAlbaEm/PyAlbaEm.py $*
+
+cd ${SICILIA}/ds/python/PyAlbaEm/
+screen -dm -S PyAlbaEm-$1 python PyAlbaEm.py $*
+
