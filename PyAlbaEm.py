@@ -392,6 +392,45 @@ class PyAlbaEm(fandango.DynamicDS):
         print str(self.AlbaElectr.getRanges(['4']))
 
 #------------------------------------------------------------------
+#    Read AutoRange attribute
+#------------------------------------------------------------------
+    def read_AutoRange(self, attr):
+        print "In ", self.get_name(), "::read_AutoRange()"
+        
+        #    Add your own code here
+        try:
+            autoR = self.AlbaElectr.getAllAutoRanges()
+            if autoR == 'ON':
+                attr_AutoRange_read = True
+            elif autoR == 'OFF':
+                attr_AutoRange_read = False
+            else:
+                raise Exception('read_AutoRange: Wrong reading')
+            attr.set_value(attr_AutoRange_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRange attribute
+#------------------------------------------------------------------
+    def write_AutoRange(self, attr):
+        print "In ", self.get_name(), "::write_AutoRange()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        if data[0]:
+            self.AlbaElectr.setAllAutoRanges('ON')
+        else:
+            self.AlbaElectr.setAllAutoRanges('OFF')
+            
+        print str(self.AlbaElectr.getAllAutoRanges())
+
+
+#------------------------------------------------------------------
 #    Read Ranges attribute
 #------------------------------------------------------------------
     def read_Ranges(self, attr):
@@ -1077,6 +1116,40 @@ class PyAlbaEm(fandango.DynamicDS):
             raise  
 
 #------------------------------------------------------------------
+#    Read SampleRate attribute
+#------------------------------------------------------------------
+    def read_SampleRate(self, attr):
+        print "In ", self.get_name(), "::read_SampleRate()"
+        
+        #    Add your own code here
+        try:
+            sampleRate = int(self.AlbaElectr.getSrate())
+            sampleRate = sampleRate/1000
+            attr.set_value(sampleRate)
+        except Exception,e:
+            self.my_logger.error("Exception reading SampleRate: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Write SampleRate attribute
+#------------------------------------------------------------------
+    def write_SampleRate(self, attr):
+        print "In ", self.get_name(), "::write_SampleRate()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        try:
+            sampleRate = data[0]*1000
+            self.AlbaElectr.setSrate(sampleRate)
+            print str(sampleRate)
+        except Exception, e:
+            self.my_logger.error("Exception setting SampleRate: %s",e)
+            raise  
+
+
+#------------------------------------------------------------------
 #    Read BufferI1 attribute
 #------------------------------------------------------------------
     def read_BufferI1(self, attr):
@@ -1242,42 +1315,6 @@ class PyAlbaEm(fandango.DynamicDS):
         except Exception, e:
             self.my_logger.error("Exception reading AlbaEmMAC: %s", e)
             raise
-
-#------------------------------------------------------------------
-#    Read SampleRate attribute
-#------------------------------------------------------------------
-    def read_SampleRate(self, attr):
-        print "In ", self.get_name(), "::read_SampleRate()"
-        
-        #    Add your own code here
-        try:
-            sampleRate = int(self.AlbaElectr.getSrate())
-            #avSamples = avSamples/1000
-            attr.set_value(sampleRate)
-        except Exception,e:
-            self.my_logger.error("Exception reading SampleRate: %s", e)
-            self.set_state(PyTango.DevState.FAULT)
-
-#------------------------------------------------------------------
-#    Write SampleRate attribute
-#------------------------------------------------------------------
-    def write_SampleRate(self, attr):
-        print "In ", self.get_name(), "::write_SampleRate()"
-        data=[]
-        attr.get_write_value(data)
-        print "Attribute value = ", data
-
-        #    Add your own code here
-        try:
-            #avSamples = data[0]*1000
-            sampleRate = data[0]
-            self.AlbaElectr.setSrate(sampleRate)
-            print str(sampleRate)
-        except Exception, e:
-            self.my_logger.error("Exception setting SampleRate: %s",e)
-            raise  
-
-
 
 #------------------------------------------------------------------
 #    My own methods
@@ -1523,6 +1560,10 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [[PyTango.DevDouble,
             PyTango.SPECTRUM,
             PyTango.READ, 4]],
+        'AutoRange':
+            [[PyTango.DevBoolean,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
         'range_ch1':
             [[PyTango.DevString,
             PyTango.SCALAR,
@@ -1733,7 +1774,7 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.SCALAR,
             PyTango.READ]],
         'SampleRate':
-            [[PyTango.DevLong,
+            [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ_WRITE]],
         }
