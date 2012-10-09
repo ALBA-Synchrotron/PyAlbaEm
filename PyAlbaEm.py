@@ -65,7 +65,8 @@ class PyAlbaEm(fandango.DynamicDS):
         fandango.DynamicDS.__init__(self,cl,name,_locals={
                                                           'READMEASURE': lambda axis: self.readMeasure(axis),
                                                           'READBUFFERCHANNEL': lambda axis: self.readBufferChannel(axis),
-                                                          'READBUFFERMEAN' : lambda axis: self.readBufferMean(axis)
+                                                          'READBUFFERMEAN' : lambda axis: self.readBufferMean(axis),
+                                                          'GETATTR': lambda attr: getattr(self,attr,None),
                                                           },useDynStates=True)
         PyAlbaEm.init_device(self)
 
@@ -206,6 +207,70 @@ class PyAlbaEm(fandango.DynamicDS):
         except Exception, e:
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in read_I4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Read InstantI1 attribute
+#------------------------------------------------------------------
+    def read_InstantI1(self, attr):
+        print "In ", self.get_name(), "::read_InstantI1()"
+        
+        #    Add your own code here
+        try:
+            attr_InstantI1_read = float(self.AlbaElectr.getInstantMeasure('1'))
+            attr.set_value(attr_InstantI1_read)
+
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_InstantI1: %s", e)
+
+
+#------------------------------------------------------------------
+#    Read InstantI2 attribute
+#------------------------------------------------------------------
+    def read_InstantI2(self, attr):
+        print "In ", self.get_name(), "::read_InstantI2()"
+        
+        #    Add your own code here
+        try:
+            attr_InstantI2_read = float(self.AlbaElectr.getInstantMeasure('2'))
+            attr.set_value(attr_InstantI2_read)
+
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_InstantI2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Read InstantI3 attribute
+#------------------------------------------------------------------
+    def read_InstantI3(self, attr):
+        print "In ", self.get_name(), "::read_InstantI3()"
+        
+        #    Add your own code here
+        try:
+            attr_InstantI3_read = float(self.AlbaElectr.getInstantMeasure('3'))
+            attr.set_value(attr_InstantI3_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_InstantI3: %s", e)
+
+
+#------------------------------------------------------------------
+#    Read InstantI4 attribute
+#------------------------------------------------------------------
+    def read_InstantI4(self, attr):
+        print "In ", self.get_name(), "::read_InstantI4()"
+        
+        #    Add your own code here
+       
+        try:
+            attr_InstantI4_read = float(self.AlbaElectr.getInstantMeasure('4'))
+            attr.set_value(attr_InstantI4_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_InstantI4: %s", e)
+
 
 #------------------------------------------------------------------
 #    Read AllChannels attribute
@@ -392,43 +457,393 @@ class PyAlbaEm(fandango.DynamicDS):
         print str(self.AlbaElectr.getRanges(['4']))
 
 #------------------------------------------------------------------
-#    Read AutoRange attribute
+#    Read AutoRange_ch1 attribute
 #------------------------------------------------------------------
-    def read_AutoRange(self, attr):
-        print "In ", self.get_name(), "::read_AutoRange()"
+    def read_AutoRange_ch1(self, attr):
+        print "In ", self.get_name(), "::read_AutoRange_ch1()"
         
         #    Add your own code here
         try:
-            autoR = self.AlbaElectr.getAllAutoRanges()
-            if autoR == 'ON':
+            autoR = self.AlbaElectr.getAutoRange(['1'])
+            if autoR[0][1] == 'YES':
                 attr_AutoRange_read = True
-            elif autoR == 'OFF':
+            elif autoR[0][1] == 'NO':
                 attr_AutoRange_read = False
             else:
-                raise Exception('read_AutoRange: Wrong reading')
+                raise Exception('read_AutoRange_ch1: Wrong reading')
             attr.set_value(attr_AutoRange_read)
         except Exception, e:
             self.set_state(PyTango.DevState.FAULT)
-            self.my_logger.error("Exception in read_AutoRange: %s", e)
+            self.my_logger.error("Exception in read_AutoRange_ch1: %s", e)
 
 
 #------------------------------------------------------------------
-#    Write AutoRange attribute
+#    Write AutoRange_ch1 attribute
 #------------------------------------------------------------------
-    def write_AutoRange(self, attr):
-        print "In ", self.get_name(), "::write_AutoRange()"
+    def write_AutoRange_ch1(self, attr):
+        print "In ", self.get_name(), "::write_AutoRange_ch1()"
         data=[]
         attr.get_write_value(data)
         print "Attribute value = ", data
 
         #    Add your own code here
         if data[0]:
-            self.AlbaElectr.setAllAutoRanges('ON')
+            self.AlbaElectr.setAutoRange([['1','YES']])
         else:
-            self.AlbaElectr.setAllAutoRanges('OFF')
+            self.AlbaElectr.setAutoRange([['1','NO']])
             
-        print str(self.AlbaElectr.getAllAutoRanges())
+        print str(self.AlbaElectr.getAutoRange(['1']))
 
+#------------------------------------------------------------------
+#    Read AutoRange_ch2 attribute
+#------------------------------------------------------------------
+    def read_AutoRange_ch2(self, attr):
+        print "In ", self.get_name(), "::read_AutoRange_ch2()"
+        
+        #    Add your own code here
+        try:
+            autoR = self.AlbaElectr.getAutoRange(['2'])
+            if autoR[0][1] == 'YES':
+                attr_AutoRange_read = True
+            elif autoR[0][1] == 'NO':
+                attr_AutoRange_read = False
+            else:
+                raise Exception('read_AutoRange_ch2: Wrong reading')
+            attr.set_value(attr_AutoRange_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRange_ch2 attribute
+#------------------------------------------------------------------
+    def write_AutoRange_ch2(self, attr):
+        print "In ", self.get_name(), "::write_AutoRange_ch2()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        if data[0]:
+            self.AlbaElectr.setAutoRange([['2','YES']])
+        else:
+            self.AlbaElectr.setAutoRange([['2','NO']])
+            
+        print str(self.AlbaElectr.getAutoRange(['2']))
+        
+#------------------------------------------------------------------
+#    Read AutoRange_ch3 attribute
+#------------------------------------------------------------------
+    def read_AutoRange_ch3(self, attr):
+        print "In ", self.get_name(), "::read_AutoRange_ch3()"
+        
+        #    Add your own code here
+        try:
+            autoR = self.AlbaElectr.getAutoRange(['3'])
+            if autoR[0][1] == 'YES':
+                attr_AutoRange_read = True
+            elif autoR[0][1] == 'NO':
+                attr_AutoRange_read = False
+            else:
+                raise Exception('read_AutoRange_ch3: Wrong reading')
+            attr.set_value(attr_AutoRange_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch3: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRange_ch3 attribute
+#------------------------------------------------------------------
+    def write_AutoRange_ch3(self, attr):
+        print "In ", self.get_name(), "::write_AutoRange_ch3()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        if data[0]:
+            self.AlbaElectr.setAutoRange([['3','YES']])
+        else:
+            self.AlbaElectr.setAutoRange([['3','NO']])
+            
+        print str(self.AlbaElectr.getAutoRange(['3']))
+        
+#------------------------------------------------------------------
+#    Read AutoRange_ch4 attribute
+#------------------------------------------------------------------
+    def read_AutoRange_ch4(self, attr):
+        print "In ", self.get_name(), "::read_AutoRange_ch4()"
+        
+        #    Add your own code here
+        try:
+            autoR = self.AlbaElectr.getAutoRange(['4'])
+            if autoR[0][1] == 'YES':
+                attr_AutoRange_read = True
+            elif autoR[0][1] == 'NO':
+                attr_AutoRange_read = False
+            else:
+                raise Exception('read_AutoRange_ch4: Wrong reading')
+            attr.set_value(attr_AutoRange_read)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRange_ch4 attribute
+#------------------------------------------------------------------
+    def write_AutoRange_ch4(self, attr):
+        print "In ", self.get_name(), "::write_AutoRange_ch4()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        if data[0]:
+            self.AlbaElectr.setAutoRange([['4','YES']])
+        else:
+            self.AlbaElectr.setAutoRange([['4','NO']])
+            
+        print str(self.AlbaElectr.getAutoRange(['4']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMin_ch1 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMin_ch1(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMin_ch1()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMin_read = self.AlbaElectr.getAutoRangeMin(['1'])
+            
+            attr.set_value(int(attr_AutoRangeMin_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRangeMin_ch1 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMin_ch1(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMin_ch1()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMin([['1',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMin(['1']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMin_ch2 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMin_ch2(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMin_ch2()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMin_read = self.AlbaElectr.getAutoRangeMin(['2'])
+            
+            attr.set_value(int(attr_AutoRangeMin_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRangeMin_ch2 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMin_ch2(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMin_ch2()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMin([['2',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMin(['2']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMin_ch3 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMin_ch3(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMin_ch3()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMin_read = self.AlbaElectr.getAutoRangeMin(['3'])
+            
+            attr.set_value(int(attr_AutoRangeMin_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch3: %s", e)
+            
+#------------------------------------------------------------------
+#    Write AutoRange_ch3 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMin_ch3(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMin_ch3()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMin([['3',data[0]]])            
+        print str(self.AlbaElectr.getAutoRangeMin(['3']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMin_ch4 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMin_ch4(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMin_ch4()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMin_read = self.AlbaElectr.getAutoRangeMin(['4'])
+            
+            attr.set_value(int(attr_AutoRangeMin_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRange_ch4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRange_ch4 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMin_ch4(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMin_ch4()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMin([['4',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMin(['4']))
+
+
+#------------------------------------------------------------------
+#    Read AutoRangeMax_ch1 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMax_ch1(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMax_ch1()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMax_read = self.AlbaElectr.getAutoRangeMax(['1'])
+            
+            attr.set_value(int(attr_AutoRangeMax_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRangeMax_ch1: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRangeMax_ch1 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMax_ch1(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMax_ch1()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMax([['1',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMax(['1']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMax_ch2 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMax_ch2(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMax_ch2()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMax_read = self.AlbaElectr.getAutoRangeMax(['2'])
+            
+            attr.set_value(int(attr_AutoRangeMax_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRangeMax_ch2: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRangeMax_ch2 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMax_ch2(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMax_ch2()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMax([['2',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMax(['2']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMax_ch3 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMax_ch3(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMax_ch3()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMax_read = self.AlbaElectr.getAutoRangeMax(['3'])
+            
+            attr.set_value(int(attr_AutoRangeMax_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRangeMax_ch3: %s", e)
+            
+#------------------------------------------------------------------
+#    Write AutoRangeMax_ch3 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMax_ch3(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMax_ch3()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMax([['3',data[0]]])            
+        print str(self.AlbaElectr.getAutoRangeMax(['3']))
+
+#------------------------------------------------------------------
+#    Read AutoRangeMax_ch4 attribute
+#------------------------------------------------------------------
+    def read_AutoRangeMax_ch4(self, attr):
+        print "In ", self.get_name(), "::read_AutoRangeMax_ch4()"
+        
+        #    Add your own code here
+        try:
+            attr_AutoRangeMax_read = self.AlbaElectr.getAutoRangeMax(['4'])
+            
+            attr.set_value(int(attr_AutoRangeMax_read[0][1]))
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_AutoRangeMax_ch4: %s", e)
+
+
+#------------------------------------------------------------------
+#    Write AutoRangeMax_ch4 attribute
+#------------------------------------------------------------------
+    def write_AutoRangeMax_ch4(self, attr):
+        print "In ", self.get_name(), "::write_AutoRangeMax_ch4()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        self.AlbaElectr.setAutoRangeMax([['4',data[0]]])
+            
+        print str(self.AlbaElectr.getAutoRangeMax(['4']))
 
 #------------------------------------------------------------------
 #    Read Ranges attribute
@@ -1051,6 +1466,40 @@ class PyAlbaEm(fandango.DynamicDS):
             raise
 
 #------------------------------------------------------------------
+#    Read TriggerDelay attribute
+#------------------------------------------------------------------
+    def read_TriggerDelay(self, attr):
+        print "In ", self.get_name(), "::read_TriggerDelay()"
+        
+        #    Add your own code here
+        try:
+            delay = float(self.AlbaElectr.getTrigDelay())
+            delay = delay/1000.0
+            attr.set_value(delay)
+        except Exception,e:
+            self.my_logger.error("Exception reading TriggerDelay: %s", e)
+            self.set_state(PyTango.DevState.FAULT)
+
+#------------------------------------------------------------------
+#    Write TriggerDelay attribute
+#------------------------------------------------------------------
+    def write_TriggerDelay(self, attr):
+        print "In ", self.get_name(), "::write_TriggerDelay()"
+        data=[]
+        attr.get_write_value(data)
+        print "Attribute value = ", data
+
+        #    Add your own code here
+        try:
+            delay = data[0]*1000.0
+            self.AlbaElectr.setTrigDelay(delay)
+            print str(delay)
+        except Exception, e:
+            self.my_logger.error("Exception setting trigger delay: %s",e)
+            raise
+
+
+#------------------------------------------------------------------
 #    Read BufferSize attribute
 #------------------------------------------------------------------
     def read_BufferSize(self, attr):
@@ -1552,6 +2001,24 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [[PyTango.DevDouble,
             PyTango.SCALAR,
             PyTango.READ]],
+                 
+        'InstantI1':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'InstantI2':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'InstantI3':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+        'InstantI4':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ]],
+                 
         'AllChannels':
             [[PyTango.DevDouble,
             PyTango.SPECTRUM,
@@ -1560,10 +2027,57 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             [[PyTango.DevDouble,
             PyTango.SPECTRUM,
             PyTango.READ, 4]],
-        'AutoRange':
+        'AutoRange_ch1':
             [[PyTango.DevBoolean,
             PyTango.SCALAR,
             PyTango.READ_WRITE]],
+        'AutoRange_ch2':
+            [[PyTango.DevBoolean,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRange_ch3':
+            [[PyTango.DevBoolean,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRange_ch4':
+            [[PyTango.DevBoolean,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+                 
+        'AutoRangeMin_ch1':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMin_ch2':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMin_ch3':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMin_ch4':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+                 
+        'AutoRangeMax_ch1':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMax_ch2':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMax_ch3':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        'AutoRangeMax_ch4':
+            [[PyTango.DevLong,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE]],
+        
         'range_ch1':
             [[PyTango.DevString,
             PyTango.SCALAR,
@@ -1703,6 +2217,14 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.READ_WRITE],
             {
                 'description':"Trigger period in seconds",
+            }
+            ],
+        'TriggerDelay':
+            [[PyTango.DevDouble,
+            PyTango.SCALAR,
+            PyTango.READ_WRITE],
+            {
+                'description':"Trigger delay in seconds",
             }
             ],
         'BufferSize':
