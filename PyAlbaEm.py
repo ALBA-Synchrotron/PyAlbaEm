@@ -1606,7 +1606,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(1)
+            data = self.AlbaElectr.getAvData(1)
             length = len(data)
             attr.set_value(data, length)
         except Exception, e:
@@ -1621,7 +1621,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(1)
+            data = self.AlbaElectr.getAvData(1)
             length = len(data)
             mean = sum(data) / length
             attr.set_value(mean)
@@ -1637,7 +1637,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(2)
+            data = self.AlbaElectr.getAvData(2)
             length = len(data)
             attr.set_value(data, length)
         except Exception, e:
@@ -1652,7 +1652,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(2)
+            data = self.AlbaElectr.getAvData(2)
             length = len(data)
             mean = sum(data) / length
             attr.set_value(mean)
@@ -1668,7 +1668,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(3)
+            data = self.AlbaElectr.getAvData(3)
             length = len(data)
             attr.set_value(data, length)
         except Exception, e:
@@ -1683,7 +1683,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(3)
+            data = self.AlbaElectr.getAvData(3)
             length = len(data)
             mean = sum(data) / length
             attr.set_value(mean)
@@ -1699,7 +1699,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(4)
+            data = self.AlbaElectr.getAvData(4)
             length = len(data)
             attr.set_value(data, length)
         except Exception, e:
@@ -1714,7 +1714,7 @@ class PyAlbaEm(fandango.DynamicDS):
         
         #    Add your own code here
         try:
-            data = self.AlbaElectr.getBufferChannel(4)
+            data = self.AlbaElectr.getAvData(4)
             length = len(data)
             mean = sum(data) / length
             attr.set_value(mean)
@@ -1806,11 +1806,11 @@ class PyAlbaEm(fandango.DynamicDS):
         return attr
         
     def readBufferChannel(self,axis):
-        attr = self.AlbaElectr.getBufferChannel(axis)
+        attr = self.AlbaElectr.getAvData(axis)
         return attr
     
     def readBufferMean(self,axis):
-        attr = self.AlbaElectr.getBufferChannel(axis)
+        attr = self.AlbaElectr.getAvData(axis)
         length = len(attr)
         mean = sum(attr) / length
         return mean
