@@ -1540,7 +1540,7 @@ class PyAlbaEm(fandango.DynamicDS):
         #    Add your own code here
         try:
             avSamples = float(self.AlbaElectr.getAvsamples())
-            avSamples = avSamples/1000
+            avSamples = avSamples/1000.0
             attr.set_value(avSamples)
         except Exception,e:
             self.my_logger.error("Exception reading AvSamples: %s", e)
@@ -1557,7 +1557,7 @@ class PyAlbaEm(fandango.DynamicDS):
 
         #    Add your own code here
         try:
-            avSamples = data[0]*1000
+            avSamples = data[0]*1000.0
             self.AlbaElectr.setAvsamples(avSamples)
             print str(avSamples)
         except Exception, e:
@@ -1573,7 +1573,7 @@ class PyAlbaEm(fandango.DynamicDS):
         #    Add your own code here
         try:
             sampleRate = int(self.AlbaElectr.getSrate())
-            sampleRate = sampleRate/1000
+            sampleRate = sampleRate/1000.0
             attr.set_value(sampleRate)
         except Exception,e:
             self.my_logger.error("Exception reading SampleRate: %s", e)
@@ -1590,7 +1590,7 @@ class PyAlbaEm(fandango.DynamicDS):
 
         #    Add your own code here
         try:
-            sampleRate = data[0]*1000
+            sampleRate = data[0]*1000.0
             self.AlbaElectr.setSrate(sampleRate)
             print str(sampleRate)
         except Exception, e:
