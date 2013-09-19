@@ -1798,6 +1798,8 @@ class PyAlbaEm(fandango.DynamicDS):
         if state == 'ON': self.set_state(PyTango.DevState.ON)
         elif state == 'RUNNING': self.set_state(PyTango.DevState.RUNNING)
         elif state == 'IDLE': self.set_state(PyTango.DevState.STANDBY)
+        elif state == 'ALARM' : self.set_state(PyTango.DevState.ALARM)
+        elif state == 'MOVING' : self.set_state(PyTango.DevState.MOVING)
         else: 
             self.my_logger.error('Unknown state %s', state)
             
@@ -1861,6 +1863,7 @@ class PyAlbaEm(fandango.DynamicDS):
         return state
     
     def offsetCorrection(self,data):
+        self.AlbaElectr.stateMoving = True
         percentage = float(data[0])
         value=percentage/100.0
         channels = eval(data[1])
@@ -1869,13 +1872,27 @@ class PyAlbaEm(fandango.DynamicDS):
         thread.start_new_thread(self.changeOffsets,(channels,value))
 
     def changeOffsets(self, channels, value):
-        self.set_state(PyTango.DevState.MOVING)
+        print "Init changeOffsets, Changing state to MOVING"
+        #self.set_state(PyTango.DevState.MOVING)
+        #state=PyTango.DevState.MOVING
+        print self.get_state()
         chans = []
         for ra in channels: chans.append(str(ra))
         rgs = self.AlbaElectr.getRanges(chans)
-        self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
-        self.AlbaElectr.setRanges(rgs)
-        self.set_state(PyTango.DevState.ON)    
+        try:
+            self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
+        except Exception, e:
+            #TODO: what to do when offset correction fails?!?!?
+            self.error_stream('Exception while running offset correction.')
+            self.error_stream(repr(e))
+        finally:
+            self.AlbaElectr.setRanges(rgs)
+        self.append_status(self.AlbaElectr.getStatus(), True)
+        
+
+        print "Ended changeOffsets, Changing state to ON"
+        self.AlbaElectr.stateMoving = False
+        #self.set_state(PyTango.DevState.ON)    
 
         
     def digitalInversion(self,option):
@@ -2172,19 +2189,35 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
         'offset_percentage_ch1':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'memorized': True
+            }
+            ],
         'offset_percentage_ch2':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'memorized': True
+            }
+            ],
         'offset_percentage_ch3':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'memorized': True
+            }
+            ],
         'offset_percentage_ch4':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'memorized': True
+            }
+            ],
 #        'offsets':
 #            [[PyTango.DevDouble,
 #            PyTango.SPECTRUM,
