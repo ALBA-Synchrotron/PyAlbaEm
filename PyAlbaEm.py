@@ -39,6 +39,8 @@ import fandango
 import logging
 import logging.handlers
 
+
+
 #==================================================================
 #   PyAlbaEm Class Description:
 #
@@ -85,7 +87,16 @@ class PyAlbaEm(fandango.DynamicDS):
         self.get_DynDS_properties()
         self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
         self._allMeasures =[0,0,0,0]
-        self._offsetPercentages = [0,0,0,0]
+        list_values = []
+        list_attr = (("offset_percentage_ch1"), ("offset_percentage_ch2"), 
+              ("offset_percentage_ch3"), ("offset_percentage_ch4"))
+        for i in list_attr:
+            value = self.get_attribute_memorized_value(i)
+            if value == None:
+               value=0
+            list_values.append(int(value))
+        self._offsetPercentages = list_values 
+
         
         self.dictRanges = {'1mA':1e-3,'100uA':1e-4,'10uA':1e-5,'1uA':1e-6,
                          '100nA':1e-7,'10nA':1e-8,'1nA':1e-9,'100pA':1e-10}
@@ -123,6 +134,22 @@ class PyAlbaEm(fandango.DynamicDS):
             self.set_state(PyTango.DevState.FAULT)
             self.my_logger.error("Exception in init_device: %s", e)
 
+#------------------------------------------------------------------
+#    User to get Attributes Memorized
+#------------------------------------------------------------------
+
+    def get_attribute_memorized_value(self, attr_name):
+        w_val = None
+        db = PyTango.Util.instance().get_database()
+        #db = self.get_database()
+        properties = db.get_device_attribute_property(self.get_name(),attr_name)
+        attr_properties = properties[attr_name]
+        try:
+            w_val = attr_properties["__value"][0]
+        except:
+            msg ='Unable to retrieve memorized value of attr: %s'% attr_name
+            self.my_logger.warning(msg)
+        return w_val
 
 #------------------------------------------------------------------
 #    Always excuted hook method
@@ -131,6 +158,7 @@ class PyAlbaEm(fandango.DynamicDS):
         print "In ", self.get_name(), "::always_excuted_hook()"
         fandango.DynamicDS.always_executed_hook(self)
         self.checkAlbaEmState()
+        self.checkAlbaEmState
 
 
 #==================================================================
@@ -1278,6 +1306,7 @@ class PyAlbaEm(fandango.DynamicDS):
 #    Write offset_percentage_ch1 attribute
 #------------------------------------------------------------------
     def write_offset_percentage_ch1(self, attr):
+        self.info_stream('!!!Writing offset percentage ch1 done!!!')
         print "In ", self.get_name(), "::write_offset_percentage_ch1()"
         
         data=[]
@@ -1286,6 +1315,7 @@ class PyAlbaEm(fandango.DynamicDS):
 
         #    Add your own code here
         self._offsetPercentages[0] = data[0]
+        self.info_stream('!!!Writing offset percentage ch1 done!!!')
         offset = data[0]/100.0
         thread.start_new_thread(self.changeOffsets,([1],offset))
         
@@ -1798,6 +1828,9 @@ class PyAlbaEm(fandango.DynamicDS):
         if state == 'ON': self.set_state(PyTango.DevState.ON)
         elif state == 'RUNNING': self.set_state(PyTango.DevState.RUNNING)
         elif state == 'IDLE': self.set_state(PyTango.DevState.STANDBY)
+        elif state == 'ALARM' : self.set_state(PyTango.DevState.ALARM)
+        elif state == 'MOVING' : self.set_state(PyTango.DevState.MOVING)
+        #elif state == 'FAULT' : self.set_state(PyTango.DevState.FAULT)
         else: 
             self.my_logger.error('Unknown state %s', state)
             
@@ -1861,21 +1894,44 @@ class PyAlbaEm(fandango.DynamicDS):
         return state
     
     def offsetCorrection(self,data):
+        self.AlbaElectr.stateMoving = True
         percentage = float(data[0])
         value=percentage/100.0
         channels = eval(data[1])
+        print "----------------------", channels
+        dev_proxy = PyTango.DeviceProxy(self.get_name())
+        print "----------------------", channels
         for i in channels:
             self._offsetPercentages[i-1]=percentage
+            print '----------------------------------------------    offset_percentage_ch%d' %(i), percentage
+            ch = 'offset_percentage_ch%d' %(i)
+            dev_proxy.write_attribute(ch, percentage)
         thread.start_new_thread(self.changeOffsets,(channels,value))
 
     def changeOffsets(self, channels, value):
-        self.set_state(PyTango.DevState.MOVING)
+        self.set_status("The device is Correcting Offsets. ")
+        print "Init changeOffsets, Changing state to MOVING"
+        #self.set_state(PyTango.DevState.MOVING)
+        #self.set_status(self.AlbaElectr.getStatus())
+        #state=PyTango.DevState.MOVING
         chans = []
         for ra in channels: chans.append(str(ra))
         rgs = self.AlbaElectr.getRanges(chans)
-        self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
-        self.AlbaElectr.setRanges(rgs)
-        self.set_state(PyTango.DevState.ON)    
+        try:
+            self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
+        except Exception, e:
+            #TODO: what to do when offset correction fails?!?!?
+            self.error_stream('Exception while running offset correction.')
+            self.error_stream(repr(e))
+        finally:
+            self.AlbaElectr.setRanges(rgs)
+
+        self.set_status(self.AlbaElectr.getStatus())
+        #self.append_status(self.AlbaElectr.getStatus())
+
+        print "Ended changeOffsets, Changing state to ON"
+        self.AlbaElectr.stateMoving = False
+        #self.set_state(PyTango.DevState.ON)    
 
         
     def digitalInversion(self,option):
@@ -2172,20 +2228,35 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
         'offset_percentage_ch1':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE],{'Memorized':'true'}    
-        ],
+            PyTango.READ_WRITE],
+            {
+                'Memorized' : 'true_without_hard_applied' #: "true"#_without_hard_applied",
+            }
+            ],
         'offset_percentage_ch2':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'Memorized' : 'true_without_hard_applied'#'Memorized': "true"#_without_hard_applied",
+            }
+            ],
         'offset_percentage_ch3':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'Memorized' : 'true_without_hard_applied'#'Memorized': "true"#_without_hard_applied",
+            }
+            ],
         'offset_percentage_ch4':
             [[PyTango.DevDouble,
             PyTango.SCALAR,
-            PyTango.READ_WRITE]],
+            PyTango.READ_WRITE],
+            {
+                'Memorized' : 'true_without_hard_applied'#'Memorized': "true"#_without_hard_applied",
+            }
+            ],
 #        'offsets':
 #            [[PyTango.DevDouble,
 #            PyTango.SPECTRUM,
@@ -2197,7 +2268,7 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.READ_WRITE, 4],
             {
                 'description':"Channels names. Must be the same names that already exists for pool channels.",
-                'memorized': True
+                'memorized': "True"
             }
             ],
 #        'LogRecord':
