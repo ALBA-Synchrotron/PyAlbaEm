@@ -38,6 +38,7 @@ from albaemlib import AlbaEm
 import fandango
 import logging
 import logging.handlers
+import time
 
 
 
@@ -158,7 +159,6 @@ class PyAlbaEm(fandango.DynamicDS):
         print "In ", self.get_name(), "::always_excuted_hook()"
         fandango.DynamicDS.always_executed_hook(self)
         self.checkAlbaEmState()
-        self.checkAlbaEmState
 
 
 #==================================================================
@@ -506,7 +506,7 @@ class PyAlbaEm(fandango.DynamicDS):
 
 
 #------------------------------------------------------------------
-#    Write AutoRange_ch1 attribute
+#    Write Auto _ch1 attribute
 #------------------------------------------------------------------
     def write_AutoRange_ch1(self, attr):
         print "In ", self.get_name(), "::write_AutoRange_ch1()"
@@ -1898,25 +1898,22 @@ class PyAlbaEm(fandango.DynamicDS):
         percentage = float(data[0])
         value=percentage/100.0
         channels = eval(data[1])
-        print "----------------------", channels
         dev_proxy = PyTango.DeviceProxy(self.get_name())
-        print "----------------------", channels
         for i in channels:
             self._offsetPercentages[i-1]=percentage
             print '----------------------------------------------    offset_percentage_ch%d' %(i), percentage
             ch = 'offset_percentage_ch%d' %(i)
             dev_proxy.write_attribute(ch, percentage)
-        thread.start_new_thread(self.changeOffsets,(channels,value))
+        ''' '''
+        #thread.start_new_thread(self.changeOffsets,(channels,value))
 
     def changeOffsets(self, channels, value):
         self.set_status("The device is Correcting Offsets. ")
-        print "Init changeOffsets, Changing state to MOVING"
-        #self.set_state(PyTango.DevState.MOVING)
-        #self.set_status(self.AlbaElectr.getStatus())
-        #state=PyTango.DevState.MOVING
+        #print "Init changeOffsets, Changing state to MOVING"
         chans = []
         for ra in channels: chans.append(str(ra))
         rgs = self.AlbaElectr.getRanges(chans)
+
         try:
             self.AlbaElectr.digitalOffsetCorrect(channels,'all',value,1)
         except Exception, e:
@@ -1925,13 +1922,13 @@ class PyAlbaEm(fandango.DynamicDS):
             self.error_stream(repr(e))
         finally:
             self.AlbaElectr.setRanges(rgs)
+            rgs2 =  self.AlbaElectr.getRanges(chans)
+            print "Before, after of ranges: "
+            print repr(rgs), repr(rgs2)
 
         self.set_status(self.AlbaElectr.getStatus())
-        #self.append_status(self.AlbaElectr.getStatus())
-
-        print "Ended changeOffsets, Changing state to ON"
         self.AlbaElectr.stateMoving = False
-        #self.set_state(PyTango.DevState.ON)    
+
 
         
     def digitalInversion(self,option):
