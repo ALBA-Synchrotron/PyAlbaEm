@@ -89,6 +89,13 @@ class PyAlbaEm(fandango.DynamicDS):
         self.AllRanges = [0,0,0,0] #used to reduce the number of readings from electrometer.
         self._allMeasures =[0,0,0,0]
         list_values = []
+        self.offset_percentage_ch1 = 0
+        self.offset_percentage_ch2 = 0
+        self.offset_percentage_ch3 = 0
+        self.offset_percentage_ch4 = 0
+        self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
+
+
         list_attr = (("offset_percentage_ch1"), ("offset_percentage_ch2"), 
               ("offset_percentage_ch3"), ("offset_percentage_ch4"))
         for i in list_attr:
@@ -109,15 +116,16 @@ class PyAlbaEm(fandango.DynamicDS):
         self.attr_I2_read = None
         self.attr_I3_read = None
         self.attr_I4_read = None
+
         try:
             self.set_state(PyTango.DevState.ON)
             self.get_device_properties(self.get_device_class())
             self.AlbaElectr = AlbaEm(self.AlbaEmName)
-            
+
             if self.LogFileName != "" or self.LogFileName == None or self.LogFileName == []:
                 DftLogFormat = '%(threadName)-14s %(levelname)-8s %(asctime)s %(name)s: %(message)s'
                 myFormat = logging.Formatter(DftLogFormat)
-                self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
+                #self.my_logger = logging.getLogger('albaEM DS') #@note: Not too clear the difference between getLogger() and Logger()
                 self.my_logger.setLevel(logging.DEBUG)
                 handler = logging.handlers.RotatingFileHandler(self.LogFileName, maxBytes=10240000, backupCount=5)
                 handler.setFormatter(myFormat)
@@ -141,11 +149,13 @@ class PyAlbaEm(fandango.DynamicDS):
 
     def get_attribute_memorized_value(self, attr_name):
         w_val = None
-        db = PyTango.Util.instance().get_database()
+        #db = PyTango.Util.instance().get_database()
         #db = self.get_database()
+        db = PyTango.Database()
         properties = db.get_device_attribute_property(self.get_name(),attr_name)
         attr_properties = properties[attr_name]
         try:
+          
             w_val = attr_properties["__value"][0]
         except:
             msg ='Unable to retrieve memorized value of attr: %s'% attr_name
