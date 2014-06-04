@@ -2265,7 +2265,7 @@ class PyAlbaEmClass(fandango.DynamicDSClass):
             PyTango.READ_WRITE, 4],
             {
                 'description':"Channels names. Must be the same names that already exists for pool channels.",
-                'memorized': "True"
+                #'memorized': "True"
             }
             ],
 #        'LogRecord':
