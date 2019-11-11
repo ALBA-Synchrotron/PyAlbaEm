@@ -1078,158 +1078,158 @@ class PyAlbaEm(fandango.DynamicDS):
 # ------------------------------------------------------------------
 #    Read aInversion_ch1 attribute
 # ------------------------------------------------------------------
-def read_aInversion_ch1(self, attr):
-    print "In ", self.get_name(), "::read_aInversion_ch1()"
+    def read_aInversion_ch1(self, attr):
+        print "In ", self.get_name(), "::read_aInversion_ch1()"
 
-    #    Add your own code here
-    try:
-        aInv = self.AlbaElectr.getInvs(['1'])
-        attr_aInversion_ch1_read = aInv[0]
-        attr.set_value(attr_aInversion_ch1_read[1])
-    except Exception, e:
-        self.set_state(PyTango.DevState.FAULT)
-        self.my_logger.error("Exception in read_aInversion_ch1: %s", e)
+        #    Add your own code here
+        try:
+            aInv = self.AlbaElectr.getInvs(['1'])
+            attr_aInversion_ch1_read = aInv[0]
+            attr.set_value(attr_aInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_aInversion_ch1: %s", e)
 
 
 # ------------------------------------------------------------------
 #    Write aInversion_ch1 attribute
 # ------------------------------------------------------------------
-def write_aInversion_ch1(self, attr):
-    print "In ", self.get_name(), "::write_aInversion_ch1()"
+    def write_aInversion_ch1(self, attr):
+        print "In ", self.get_name(), "::write_aInversion_ch1()"
 
-    data = []
-    attr.get_write_value(data)
-    print "Attribute value = ", data
+        data = []
+        attr.get_write_value(data)
+        print "Attribute value = ", data
 
-    #    Add your own code here
-    self.AlbaElectr.setInvs([['1', data[0]]])
-    print str(self.AlbaElectr.getInvs(['1']))
+        #    Add your own code here
+        self.AlbaElectr.setInvs([['1', data[0]]])
+        print str(self.AlbaElectr.getInvs(['1']))
 
 
 # ------------------------------------------------------------------
 #    Read aInversion_ch2 attribute
 # ------------------------------------------------------------------
-def read_aInversion_ch2(self, attr):
-    print "In ", self.get_name(), "::read_aInversion_ch2()"
+    def read_aInversion_ch2(self, attr):
+        print "In ", self.get_name(), "::read_aInversion_ch2()"
 
-    #    Add your own code here
-    try:
-        aInv = self.AlbaElectr.getInvs(['2'])
-        attr_aInversion_ch1_read = aInv[0]
-        attr.set_value(attr_aInversion_ch1_read[1])
-    except Exception, e:
-        self.set_state(PyTango.DevState.FAULT)
-        self.my_logger.error("Exception in read_aInversion_ch2: %s", e)
+        #    Add your own code here
+        try:
+            aInv = self.AlbaElectr.getInvs(['2'])
+            attr_aInversion_ch1_read = aInv[0]
+            attr.set_value(attr_aInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_aInversion_ch2: %s", e)
 
 
 # ------------------------------------------------------------------
 #    Write aInversion_ch2 attribute
 # ------------------------------------------------------------------
-def write_aInversion_ch2(self, attr):
-    print "In ", self.get_name(), "::write_aInversion_ch2()"
+    def write_aInversion_ch2(self, attr):
+        print "In ", self.get_name(), "::write_aInversion_ch2()"
 
-    data = []
-    attr.get_write_value(data)
-    print "Attribute value = ", data
+        data = []
+        attr.get_write_value(data)
+        print "Attribute value = ", data
 
-    #    Add your own code here
-    self.AlbaElectr.setInvs([['2', data[0]]])
-    print str(self.AlbaElectr.getInvs(['2']))
+        #    Add your own code here
+        self.AlbaElectr.setInvs([['2', data[0]]])
+        print str(self.AlbaElectr.getInvs(['2']))
 
 
 # ------------------------------------------------------------------
 #    Read aInversion_ch3 attribute
 # ------------------------------------------------------------------
-def read_aInversion_ch3(self, attr):
-    print "In ", self.get_name(), "::read_aInversion_ch3()"
+    def read_aInversion_ch3(self, attr):
+        print "In ", self.get_name(), "::read_aInversion_ch3()"
 
-    #    Add your own code here
-    try:
-        aInv = self.AlbaElectr.getInvs(['3'])
-        attr_aInversion_ch1_read = aInv[0]
-        attr.set_value(attr_aInversion_ch1_read[1])
-    except Exception, e:
-        self.set_state(PyTango.DevState.FAULT)
-        self.my_logger.error("Exception in read_aInversion_ch3: %s", e)
+        #    Add your own code here
+        try:
+            aInv = self.AlbaElectr.getInvs(['3'])
+            attr_aInversion_ch1_read = aInv[0]
+            attr.set_value(attr_aInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_aInversion_ch3: %s", e)
 
 
 # ------------------------------------------------------------------
 #    Write aInversion_ch3 attribute
 # ------------------------------------------------------------------
-def write_aInversion_ch3(self, attr):
-    print "In ", self.get_name(), "::write_aInversion_ch3()"
+    def write_aInversion_ch3(self, attr):
+        print "In ", self.get_name(), "::write_aInversion_ch3()"
 
-    data = []
-    attr.get_write_value(data)
-    print "Attribute value = ", data
+        data = []
+        attr.get_write_value(data)
+        print "Attribute value = ", data
 
-    #    Add your own code here
-    self.AlbaElectr.setInvs([['3', data[0]]])
-    print str(self.AlbaElectr.getInvs(['3']))
+        #    Add your own code here
+        self.AlbaElectr.setInvs([['3', data[0]]])
+        print str(self.AlbaElectr.getInvs(['3']))
 
 
 # ------------------------------------------------------------------
 #    Read aInversion_ch4 attribute
 # ------------------------------------------------------------------
-def read_aInversion_ch4(self, attr):
-    print "In ", self.get_name(), "::read_aInversion_ch4()"
+    def read_aInversion_ch4(self, attr):
+        print "In ", self.get_name(), "::read_aInversion_ch4()"
 
-    #    Add your own code here
-    try:
-        aInv = self.AlbaElectr.getInvs(['4'])
-        attr_aInversion_ch1_read = aInv[0]
-        attr.set_value(attr_aInversion_ch1_read[1])
-    except Exception, e:
-        self.set_state(PyTango.DevState.FAULT)
-        self.my_logger.error("Exception in read_aInversion_ch4: %s", e)
+        #    Add your own code here
+        try:
+            aInv = self.AlbaElectr.getInvs(['4'])
+            attr_aInversion_ch1_read = aInv[0]
+            attr.set_value(attr_aInversion_ch1_read[1])
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_aInversion_ch4: %s", e)
 
 
 # ------------------------------------------------------------------
 #    Write aInversion_ch4 attribute
 # ------------------------------------------------------------------
-def write_aInversion_ch4(self, attr):
-    print "In ", self.get_name(), "::write_aInversion_ch4()"
+    def write_aInversion_ch4(self, attr):
+        print "In ", self.get_name(), "::write_aInversion_ch4()"
 
-    data = []
-    attr.get_write_value(data)
-    print "Attribute value = ", data
+        data = []
+        attr.get_write_value(data)
+        print "Attribute value = ", data
 
-    #    Add your own code here
-    self.AlbaElectr.setInvs([['4', data[0]]])
-    print str(self.AlbaElectr.getInvs(['4']))
+        #    Add your own code here
+        self.AlbaElectr.setInvs([['4', data[0]]])
+        print str(self.AlbaElectr.getInvs(['4']))
 
 
 # ------------------------------------------------------------------
 #    Read aInversions attribute
 # ------------------------------------------------------------------
-def read_aInversions(self, attr):
-    print "In ", self.get_name(), "::read_aInversions()"
+    def read_aInversions(self, attr):
+        print "In ", self.get_name(), "::read_aInversions()"
 
-    #    Add your own code here
-    try:
-        aInvs = self.AlbaElectr.getInvsAll()
-        aInvsList = []
-        for i in aInvs: aInvsList.append(i[1])
-        attr_aInvs_read = aInvsList
-        attr.set_value(attr_aInvs_read, 4)
-    except Exception, e:
-        self.set_state(PyTango.DevState.FAULT)
-        self.my_logger.error("Exception in read_aInversions: %s", e)
+        #    Add your own code here
+        try:
+            aInvs = self.AlbaElectr.getInvsAll()
+            aInvsList = []
+            for i in aInvs: aInvsList.append(i[1])
+            attr_aInvs_read = aInvsList
+            attr.set_value(attr_aInvs_read, 4)
+        except Exception, e:
+            self.set_state(PyTango.DevState.FAULT)
+            self.my_logger.error("Exception in read_aInversions: %s", e)
 
 
 # ------------------------------------------------------------------
 #    Write aInversions attribute
 # ------------------------------------------------------------------
-def write_aInversions(self, attr):
-    print "In ", self.get_name(), "::write_aInversions()"
-    data = []
-    attr.get_write_value(data)
-    print "Attribute value = ", data
+    def write_aInversions(self, attr):
+        print "In ", self.get_name(), "::write_aInversions()"
+        data = []
+        attr.get_write_value(data)
+        print "Attribute value = ", data
 
-    #    Add your own code here
-    self.AlbaElectr.setInvsAll(data[0])
+        #    Add your own code here
+        self.AlbaElectr.setInvsAll(data[0])
 
-    print str(self.AlbaElectr.getInvsAll())
+        print str(self.AlbaElectr.getInvsAll())
 
 
 #------------------------------------------------------------------
